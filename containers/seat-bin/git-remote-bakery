@@ -1,0 +1,90 @@
+#!/usr/bin/env node
+// git's push helper in a Bakery container seat (remote_helpers.rs is the
+// Mac's): git hands it every push (url.bakery::<scheme>.pushInsteadOf), and
+// it asks the Bakery at the seat's gateway (BAKERY_DOOR_URL, with the
+// thread's own credential), which holds each push for the operator.
+"use strict";
+const { execFileSync } = require("node:child_process");
+const readline = require("node:readline");
+
+async function ask(body) {
+  const door = new URL(process.env.BAKERY_DOOR_URL ?? "");
+  const headers = { "content-type": "application/json" };
+  if (door.username) {
+    const who = `${decodeURIComponent(door.username)}:${decodeURIComponent(door.password)}`;
+    headers.authorization = `Basic ${Buffer.from(who).toString("base64")}`;
+    door.username = "";
+    door.password = "";
+  }
+  // Longer than a card waits for the operator.
+  const res = await fetch(new URL("/remote/ask", door), {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(120_000),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || `the Bakery answered ${res.status}`);
+  return JSON.parse(text);
+}
+
+const oneLine = (text) => String(text).split(/\s+/).filter(Boolean).join(" ");
+
+function top() {
+  try {
+    return execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  } catch {
+    return "";
+  }
+}
+
+const out = (text) => process.stdout.write(text);
+
+// One batch of `push <src>:<dst>` lines: one answer a ref, then a blank line.
+async function push(specs) {
+  const refs = specs.map((spec) => {
+    const [src, dst = src] = spec.split(":");
+    return { src: src.replace(/^\+/, ""), dst, force: src.startsWith("+") };
+  });
+  let answer = null;
+  let failure = null;
+  try {
+    answer = await ask({ kind: "push", repo: top(), refs });
+  } catch (e) {
+    failure = e.message;
+  }
+  for (const ref of refs) {
+    const one = answer?.refs?.find((r) => r.dst === ref.dst);
+    if (one?.ok) {
+      process.stderr.write(`bakery: ${one.message ?? ""}\n`);
+      out(`ok ${ref.dst}\n`);
+    } else {
+      out(`error ${ref.dst} ${oneLine(one?.message ?? failure ?? answer?.message ?? "refused")}\n`);
+    }
+  }
+  out("\n");
+}
+
+(async () => {
+  const specs = [];
+  for await (const line of readline.createInterface({ input: process.stdin })) {
+    const space = line.indexOf(" ");
+    const [command, rest] = space < 0 ? [line, ""] : [line.slice(0, space), line.slice(space + 1)];
+    if (command === "push") {
+      specs.push(rest);
+    } else if (specs.length) {
+      // The blank line that ends a batch.
+      await push(specs.splice(0));
+    } else if (command === "capabilities") {
+      out("push\noption\n\n");
+    } else if (command === "option") {
+      out("unsupported\n");
+    } else if (command === "list") {
+      out("\n");
+    } else if (line === "") {
+      break;
+    } else {
+      out("\n");
+    }
+  }
+})();

@@ -1,0 +1,506 @@
+/* ---- Settings window: one row vocabulary for every page -------------------
+   Imported by SettingsFrame only, and every selector is scoped under the
+   window root, so nothing here reaches the rest of the app.
+
+   Each page reads the same way, the way desktop AI harness settings do:
+   flat sections with a heading, and rows that put a title (with an
+   optional muted description) on the left and the control on the right,
+   split by hairlines — never a card around a section. Panels opt in with
+   these `set-*` classes instead of carrying their own copies.
+
+   Colour only ever comes from theme.css tokens (same rule as every other
+   module); sizes come from the custom properties below so the pages agree.
+   Layout responds to the content column (`@container settings`), not the
+   viewport, because the column is narrower than the window on desktop.    */
+
+.settings-window {
+  --set-font-title: 600 20px/1.3 var(--font-ui);
+  --set-font-heading: 600 16px/1.35 var(--font-ui);
+  --set-font-subheading: 600 13px/1.4 var(--font-ui);
+  --set-font-label: 450 13px/1.4 var(--font-ui);
+  --set-font-body: 400 13px/1.5 var(--font-ui);
+  --set-font-desc: 400 12px/1.5 var(--font-ui);
+  --set-font-mono: 400 11.5px/1.5 var(--font-mono);
+  --set-control-h: 30px;
+  --set-section-gap: 36px;
+}
+
+/* ---- page + sections ------------------------------------------------------ */
+
+.settings-window .set-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--set-section-gap);
+  min-width: 0;
+}
+/* Two panels on one page (Memory & storage) read as one column. */
+.settings-window .set-panel + .set-panel { margin-top: var(--set-section-gap); }
+
+/* The panel's one-line purpose, tucked under the frame's page title (which
+   sits 28px above the panel). Consecutive leads read as one paragraph. */
+.settings-window .set-lead {
+  margin: 0;
+  max-width: 620px;
+  font: var(--set-font-body);
+  color: var(--fg-dim);
+}
+.settings-window .set-panel > .set-lead:first-child { margin-top: -20px; }
+.settings-window .set-lead + .set-lead { margin-top: calc(8px - var(--set-section-gap)); }
+.settings-window .set-lead strong { color: var(--fg-2); font-weight: 600; }
+
+.settings-window .set-section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* Heading (+ description) on the left, section-wide actions on the right. */
+.settings-window .set-section-hd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 4px;
+}
+.settings-window .set-section-hd > :first-child { flex: 1 1 220px; min-width: 0; }
+.settings-window .set-section-h {
+  margin: 0 0 4px;
+  font: var(--set-font-heading);
+  color: var(--fg);
+}
+.settings-window .set-section-hd .set-section-h { margin: 0; }
+.settings-window .set-section-desc {
+  margin: -1px 0 6px;
+  max-width: 620px;
+  font: var(--set-font-desc);
+  color: var(--fg-dim);
+}
+.settings-window .set-section-hd .set-section-desc { margin: 3px 0 0; }
+
+/* A group inside a section (Baker / Projects / Tasks). */
+.settings-window .set-subhead {
+  margin: 18px 0 2px;
+  font: var(--set-font-subheading);
+  color: var(--fg-2);
+}
+
+/* ---- rows ------------------------------------------------------------------ */
+
+.settings-window .set-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.settings-window .set-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  min-width: 0;
+  padding: 12px 0;
+}
+.settings-window .set-row + .set-row { border-top: 1px solid var(--line-soft); }
+.settings-window .set-row.top { align-items: flex-start; }
+
+.settings-window .set-row-text {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.settings-window .set-row-title {
+  font: var(--set-font-label);
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+.settings-window .set-row-desc {
+  font: var(--set-font-desc);
+  color: var(--fg-dim);
+  overflow-wrap: anywhere;
+}
+.settings-window .set-row-title code,
+.settings-window .set-row-desc code,
+.settings-window .set-lead code,
+.settings-window .set-section-desc code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+.settings-window .set-row-control {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+/* Anything a row opens below itself (a sign-in flow, a file browser,
+   disclosures) spans the whole row. */
+.settings-window .set-row-more {
+  flex: 1 1 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* A leading glyph (provider initial, layer tag) beside the row text; the
+   pair takes the text column's place. */
+.settings-window .set-row-lead {
+  flex: 1 1 240px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.settings-window .set-row-lead > .set-row-text { flex: 1 1 auto; }
+
+/* A plain value shown where a control would be. */
+.settings-window .set-value {
+  font: var(--set-font-mono);
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.settings-window .set-value.big { font: 600 15px/1.2 var(--font-mono); color: var(--fg); font-variant-numeric: tabular-nums; }
+
+/* A row that is itself a link (to a project's own page). */
+.settings-window a.set-row {
+  margin: 0 -10px;
+  padding-inline: 10px;
+  border-radius: var(--r-lg);
+  color: inherit;
+  text-decoration: none;
+}
+.settings-window a.set-row:hover { background: var(--bg-raised); text-decoration: none; }
+.settings-window a.set-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* Labelled form fields (the adapter forms). */
+.settings-window .set-field {
+  display: grid;
+  grid-template-columns: minmax(0, 132px) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 16px;
+  padding: 7px 0;
+}
+.settings-window .set-field > label,
+.settings-window .set-field > .set-field-label {
+  font: var(--set-font-desc);
+  color: var(--fg-dim);
+}
+.settings-window .set-field > input,
+.settings-window .set-field > textarea,
+.settings-window .set-field > select { width: 100%; }
+
+/* ---- text ------------------------------------------------------------------ */
+
+.settings-window .set-muted {
+  margin: 0;
+  font: var(--set-font-desc);
+  color: var(--fg-faint);
+  overflow-wrap: anywhere;
+}
+.settings-window .set-note {
+  margin: 0;
+  font: var(--set-font-desc);
+  color: var(--fg-dim);
+  overflow-wrap: anywhere;
+}
+.settings-window .set-error {
+  margin: 0;
+  font: var(--set-font-desc);
+  color: var(--bad);
+  overflow-wrap: anywhere;
+}
+.settings-window .set-mono {
+  font: var(--set-font-mono);
+  color: var(--fg-faint);
+  overflow-wrap: anywhere;
+}
+.settings-window .set-note code,
+.settings-window .set-muted code,
+.settings-window .set-error code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: var(--fg-2);
+}
+/* Loading / empty / explanatory lines sit in a section like a row does. */
+.settings-window .set-section > .set-muted,
+.settings-window .set-section > .set-note,
+.settings-window .set-section > .set-error { padding: 8px 0; }
+
+/* A status line that answers an action (saved / failed / next step). */
+.settings-window .set-status {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--r-lg);
+  background: var(--bg-panel);
+  font: var(--set-font-desc);
+  color: var(--fg-dim);
+  overflow-wrap: anywhere;
+}
+
+/* A warning or explanation that must stay visible. Tinted, never boxed in
+   heavy chrome. */
+.settings-window .set-callout {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-panel);
+  font: var(--set-font-desc);
+  color: var(--fg-dim);
+  overflow-wrap: anywhere;
+}
+.settings-window .set-callout.warn { border-color: var(--warn-border); background: var(--warn-bg); color: var(--warn); }
+.settings-window .set-callout.bad { border-color: var(--bad-border); background: var(--bad-bg); color: var(--bad); }
+.settings-window .set-callout.ok { border-color: var(--ok-border); background: var(--ok-bg); color: var(--ok); }
+.settings-window .set-callout code { font-family: var(--font-mono); font-size: 0.92em; }
+
+/* ---- controls ---------------------------------------------------------------
+   The AI Elements (shadcn) language, from tokens: rounded-md controls with a
+   hairline border, muted until hovered, one solid primary per form. */
+
+.settings-window .set-btn {
+  flex: 0 0 auto;
+  height: var(--set-control-h);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: transparent;
+  color: var(--fg-2);
+  font: 500 12.5px/1 var(--font-ui);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.settings-window .set-btn:hover:not(:disabled) { background: var(--bg-chip); color: var(--fg); }
+.settings-window .set-btn:disabled { opacity: 0.45; cursor: default; }
+.settings-window .set-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.settings-window .set-btn.primary {
+  border-color: transparent;
+  background: var(--accent-solid);
+  color: var(--fg-on-solid);
+}
+.settings-window .set-btn.primary:hover:not(:disabled) { background: var(--accent-solid-h); color: var(--fg-on-solid); }
+.settings-window .set-btn.danger:hover:not(:disabled) {
+  border-color: var(--bad-border);
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+/* The confirming step of something irreversible stays red at rest. */
+.settings-window .set-btn.destructive {
+  border-color: var(--bad-border);
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+.settings-window .set-btn.destructive:hover:not(:disabled) { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); }
+.settings-window .set-btn.sm { height: 26px; padding: 0 9px; font-size: 12px; }
+
+.settings-window .set-input,
+.settings-window .set-select {
+  height: var(--set-control-h);
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: transparent;
+  color: var(--fg);
+  font: 400 12.5px/1.2 var(--font-ui);
+}
+.settings-window textarea.set-input {
+  height: auto;
+  min-height: calc(var(--set-control-h) * 2);
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.settings-window .set-input.mono { font-family: var(--font-mono); font-size: 12px; }
+/* A select shows its value with a chevron, the same in every engine. The
+   chevron is two gradients so it takes a token colour. */
+.settings-window .set-select {
+  appearance: none;
+  padding-right: 28px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--fg-faint) 50%),
+    linear-gradient(135deg, var(--fg-faint) 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) 55%,
+    calc(100% - 11px) 55%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+.settings-window .set-select option { background: var(--bg-raised); color: var(--fg); }
+.settings-window .set-input:focus-visible,
+.settings-window .set-select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+.settings-window .set-input::placeholder { color: var(--fg-fainter); }
+.settings-window .set-input:disabled,
+.settings-window .set-select:disabled { opacity: 0.5; cursor: default; }
+.settings-window .set-input[aria-invalid="true"] { border-color: var(--bad); }
+
+.settings-window input[type="checkbox"] { accent-color: var(--accent); }
+
+/* A checkbox drawn as a switch — still a checkbox to assistive tech. */
+.settings-window input[type="checkbox"].set-switch {
+  appearance: none;
+  flex: 0 0 auto;
+  position: relative;
+  width: 32px;
+  height: 18px;
+  margin: 0;
+  border-radius: var(--r-pill);
+  background: var(--bg-chip);
+  box-shadow: inset 0 0 0 1px var(--line);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.settings-window input[type="checkbox"].set-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-pill);
+  background: var(--fg-dim);
+  transition: transform 120ms ease, background 120ms ease;
+}
+.settings-window input[type="checkbox"].set-switch:checked { background: var(--accent-solid); box-shadow: none; }
+.settings-window input[type="checkbox"].set-switch:checked::after { transform: translateX(14px); background: var(--fg-on-solid); }
+.settings-window input[type="checkbox"].set-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settings-window input[type="checkbox"].set-switch:disabled { opacity: 0.45; cursor: default; }
+
+/* Segmented choice — the same control as the sidebar's Chat / Baker switch. */
+.settings-window .set-seg {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-xl);
+  background: var(--bg-app);
+}
+.settings-window .set-seg-btn {
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: transparent;
+  color: var(--fg-faint);
+  font: 550 12px/1 var(--font-ui);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.settings-window .set-seg-btn:hover { color: var(--fg-2); }
+.settings-window .set-seg-btn.on { background: var(--bg-chip); color: var(--fg); box-shadow: var(--shadow-chip); }
+.settings-window .set-seg-btn.on.bad { background: var(--bad-bg); color: var(--bad); box-shadow: none; }
+.settings-window .set-seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* Status badge. */
+.settings-window .set-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 1px 7px;
+  border-radius: var(--r-sm);
+  background: var(--bg-chip);
+  color: var(--fg-dim);
+  font: 500 11px/1.3 var(--font-ui);
+  white-space: nowrap;
+}
+.settings-window .set-chip.ok { background: var(--ok-bg); color: var(--ok); }
+.settings-window .set-chip.warn { background: var(--warn-bg); color: var(--warn); }
+.settings-window .set-chip.bad { background: var(--bad-bg); color: var(--bad); }
+.settings-window .set-chip.mono { font-family: var(--font-mono); font-weight: 400; }
+
+/* A button row under a form or a section. */
+.settings-window .set-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+/* ---- disclosure -------------------------------------------------------------- */
+
+.settings-window .set-disclosure { min-width: 0; }
+.settings-window .set-disclosure > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 2px 0;
+  list-style: none;
+  font: 500 12.5px/1.4 var(--font-ui);
+  color: var(--fg-dim);
+  cursor: pointer;
+  user-select: none;
+}
+.settings-window .set-disclosure > summary::-webkit-details-marker { display: none; }
+.settings-window .set-disclosure > summary::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  margin: 0 2px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 120ms ease;
+}
+.settings-window .set-disclosure[open] > summary::before { transform: rotate(45deg); }
+.settings-window .set-disclosure > summary:hover { color: var(--fg); }
+.settings-window .set-disclosure > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
+.settings-window .set-disclosure.heading > summary { font: var(--set-font-heading); color: var(--fg); }
+
+/* A plain list inside a disclosure (commands, tools, sandbox paths). */
+.settings-window .set-list {
+  list-style: none;
+  margin: 6px 0 2px 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font: var(--set-font-mono);
+  color: var(--fg-faint);
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-window .set-disclosure > summary::before,
+  .settings-window input[type="checkbox"].set-switch,
+  .settings-window input[type="checkbox"].set-switch::after { transition: none; }
+}
+
+/* ---- narrow content column ------------------------------------------------- */
+
+@container settings (max-width: 520px) {
+  .settings-window .set-row { gap: 8px 12px; }
+  .settings-window .set-row-control { justify-content: flex-start; margin-left: 0; }
+  .settings-window .set-value { text-align: left; }
+  .settings-window .set-field { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "bakery",
+  "productName": "Bakery",
+  "description": "Bakery's desktop shell",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.cjs"
+}

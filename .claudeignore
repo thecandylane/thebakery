@@ -1,0 +1,63 @@
+# =============================================================================
+# Claude Code and other coding agents — do not load into context.
+# Patterns are gitignore-style, relative to the repo root.
+# Paths *outside* the workspace ($HOME/.bakery, ~/.ssh, the keychain, etc.)
+# are denied in CLAUDE.md / AGENTS.md; this file cannot cover absolute homes.
+# =============================================================================
+
+# ----- Private / local-only provider sources -----
+crates/bakery-agent/src/private/**
+**/*claude_code_oauth*
+**/*claude-code-oauth*
+**/*claude_code_oauth*.rs
+**/*codex_oauth*
+**/*cursor_oauth*
+**/OUT_DIR/**/claude_code_oauth*
+docs/operator-local/**
+
+# ----- Credential files (never open, quote, or shell-cat) -----
+**/secrets.json
+**/.secrets/**
+**/*credentials*.json
+**/.credentials.json
+**/oauth_creds.json
+**/auth.json
+**/*-auth.json
+**/*_auth.json
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.keystore
+**/*.jks
+**/.netrc
+**/.env
+**/.env.*
+!.env.example
+**/*service-account*.json
+**/gcp-key*.json
+**/*serviceaccount*.json
+
+# ----- Bakery + third-party runtime credential dirs (if ever linked into tree) -----
+.bakery/**
+**/.bakery/**
+**/.claude/**
+**/.gemini/**
+**/.codex/**
+**/.cursor/**
+**/.ssh/**
+**/.config/gh/**
+**/.config/gcloud/**
+
+# ----- Heart / node state (may embed full file contents + sensitive project data) -----
+**/heart.db
+**/heart.db-*
+**/node.json
+
+# ----- Build outputs (may contain copied private provider via build.rs OUT_DIR) -----
+target/**
+**/target/**
+bakery-client/node_modules/**
+bakery-client/build/**
+bakery-client/.svelte-kit/**
+bakery-client/src-tauri/target/**
+bakery-client/src-tauri/gen/**

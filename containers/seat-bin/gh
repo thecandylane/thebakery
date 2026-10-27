@@ -1,0 +1,74 @@
+#!/usr/bin/env node
+// gh in a Bakery container seat (remote_helpers.rs is the Mac's): it asks the
+// Bakery at the seat's gateway (BAKERY_DOOR_URL, with the thread's own
+// credential). `pr create`, `issue create` and `issue|pr comment` become
+// the same cards an agent's own Bakery tools raise; the rest is the
+// operator's to do.
+"use strict";
+const { execFileSync } = require("node:child_process");
+const fs = require("node:fs");
+
+async function ask(body) {
+  const door = new URL(process.env.BAKERY_DOOR_URL ?? "");
+  const headers = { "content-type": "application/json" };
+  if (door.username) {
+    const who = `${decodeURIComponent(door.username)}:${decodeURIComponent(door.password)}`;
+    headers.authorization = `Basic ${Buffer.from(who).toString("base64")}`;
+    door.username = "";
+    door.password = "";
+  }
+  // Longer than a card waits for the operator.
+  const res = await fetch(new URL("/remote/ask", door), {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(120_000),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || `the Bakery answered ${res.status}`);
+  return JSON.parse(text);
+}
+
+function top() {
+  try {
+    return execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  } catch {
+    return "";
+  }
+}
+
+function fail(message) {
+  process.stderr.write(`${message}\n`);
+  process.exit(1);
+}
+
+// A body file goes in as the body: the Bakery never reads the seat's files.
+const given = process.argv.slice(2);
+const args = [];
+for (let at = 0; at < given.length; at++) {
+  const arg = given[at];
+  let file = null;
+  if (arg === "-F" || arg === "--body-file") {
+    file = given[++at];
+    if (file === undefined) fail(`${arg} needs a file`);
+  } else if (arg.startsWith("--body-file=")) {
+    file = arg.slice("--body-file=".length);
+  }
+  if (file === null) {
+    args.push(arg);
+    continue;
+  }
+  try {
+    args.push("--body", fs.readFileSync(file === "-" ? 0 : file, "utf8"));
+  } catch (e) {
+    fail(`${file}: ${e.message}`);
+  }
+}
+
+ask({ kind: "gh", repo: top(), args }).then(
+  (answer) => {
+    if (!answer.ok) fail(answer.message ?? "refused");
+    process.stdout.write(`${answer.url ?? answer.message ?? ""}\n`);
+  },
+  (e) => fail(e.message),
+);

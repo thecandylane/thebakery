@@ -1,0 +1,2028 @@
+/* Tailwind for the agent panel only — deliberately scoped.
+ *
+ * The hazard this file exists to avoid: Tailwind's preflight is a global
+ * element reset. Importing it into an app whose shell is hand-written CSS
+ * would restyle every existing surface (sidebar, Review, terminals) in one
+ * stroke. So preflight is NOT imported. Instead:
+ *
+ *   - theme + utilities layers only, so utility classes exist;
+ *   - a small reset of our own, confined to the panel root and to Radix's
+ *     portal wrappers (menus/selects render outside the panel's DOM);
+ *   - `@source` limited to the React island, so class scanning never walks
+ *     the Svelte shell.
+ *
+ * Colour never originates here. `theme.css` owns it; `@theme inline` below
+ * only republishes those tokens under the names Tailwind generates
+ * utilities from (`bg-background`, `text-muted-foreground`, `border-border`).
+ */
+
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* Only the React island and the markdown renderer's own classes. */
+@source "../ai-elements";
+@source "../react";
+@source "../../components/ui";
+@source "../../../node_modules/streamdown/dist";
+
+/* Upstream `Message` tags its wrapper `.is-user` / `.is-assistant` and then
+   styles children with `group-[.is-user]:…`. It also uses a bare `is-user:`
+   variant, which Tailwind only understands if the consuming app declares it
+   — the AI Elements install instructions expect this in your globals. */
+@custom-variant is-user (&:where(.is-user, .is-user *));
+@custom-variant is-assistant (&:where(.is-assistant, .is-assistant *));
+/* The operator's selected scheme, including its custom canvas luminance, is
+   authoritative. Tailwind's default media-query dark variant would otherwise
+   restyle agent controls when the OS disagrees with Bakery's Appearance page.
+   Root matching includes Radix's body-level portals without a React cache. */
+@custom-variant dark (&:where([data-color-mode="dark"], [data-color-mode="dark"] *));
+
+@theme inline {
+  --color-background: var(--ai-background);
+  --color-foreground: var(--ai-foreground);
+  --color-card: var(--ai-card);
+  --color-card-foreground: var(--ai-card-foreground);
+  --color-popover: var(--ai-popover);
+  --color-popover-foreground: var(--ai-popover-foreground);
+  --color-primary: var(--ai-primary);
+  --color-primary-foreground: var(--ai-primary-foreground);
+  --color-secondary: var(--ai-secondary);
+  --color-secondary-foreground: var(--ai-secondary-foreground);
+  --color-muted: var(--ai-muted);
+  --color-muted-foreground: var(--ai-muted-foreground);
+  --color-accent: var(--ai-accent);
+  --color-accent-foreground: var(--ai-accent-foreground);
+  --color-destructive: var(--ai-destructive);
+  --color-destructive-foreground: var(--ai-destructive-foreground);
+  --color-border: var(--ai-border);
+  --color-input: var(--ai-input);
+  --color-ring: var(--ai-ring);
+
+  --radius-sm: calc(var(--ai-radius) - 2px);
+  --radius-md: var(--ai-radius);
+  --radius-lg: calc(var(--ai-radius) + 2px);
+  --radius-xl: calc(var(--ai-radius) + 4px);
+
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-mono);
+}
+
+/* ---- scoped reset ---------------------------------------------------------
+ * What preflight would have given the components, granted ONLY inside the
+ * panel and inside Radix's portalled surfaces. `:where()` keeps specificity
+ * at zero so any utility class still wins.
+ */
+@layer base {
+  :where(.bakery-ai, [data-radix-popper-content-wrapper], [data-slot="dialog-overlay"], [data-slot="dialog-content"]) {
+    font-family: var(--font-ui);
+    color: var(--ai-foreground);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :where(
+      .bakery-ai,
+      [data-radix-popper-content-wrapper],
+      [data-slot="dialog-overlay"],
+      [data-slot="dialog-content"]
+    )
+    :where(button, input, textarea, select, optgroup) {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0 solid var(--ai-border);
+    border-radius: 0;
+  }
+
+  :where(.bakery-ai, [data-radix-popper-content-wrapper]) :where(button) {
+    cursor: pointer;
+  }
+  :where(.bakery-ai, [data-radix-popper-content-wrapper]) :where(button:disabled) {
+    cursor: default;
+  }
+
+  /* Tailwind's `border` utility sets width only; it expects a default
+     colour and style to already be in place. */
+  :where(
+      .bakery-ai,
+      [data-radix-popper-content-wrapper],
+      [data-slot="dialog-overlay"],
+      [data-slot="dialog-content"]
+    )
+    :where(*, *::before, *::after) {
+    border-color: var(--ai-border);
+    border-style: solid;
+    border-width: 0;
+    box-sizing: border-box;
+  }
+
+  :where(.bakery-ai, [data-radix-popper-content-wrapper]) :where(svg) {
+    display: block;
+    vertical-align: middle;
+  }
+
+  :where(.bakery-ai, [data-radix-popper-content-wrapper])
+    :where(h1, h2, h3, h4, h5, h6, p, blockquote, figure, pre, dl, dd) {
+    margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  :where(.bakery-ai, [data-radix-popper-content-wrapper]) :where(ul, ol) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The shell styles `a` globally (accent colour + underline on hover);
+     inside rendered Markdown that is the behaviour we want, so links are
+     left alone here on purpose. */
+
+  :where(.bakery-ai) :where(pre, code, kbd, samp) {
+    font-family: var(--font-mono);
+  }
+
+  /* Markdown lists DO need their markers back — the reset above strips them
+     for the component chrome, and `.bakery-ai-prose` is only applied to
+     rendered message content. */
+  :where(.bakery-ai-prose) :where(ul) {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  :where(.bakery-ai-prose) :where(ol) {
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+  :where(.bakery-ai-prose) :where(p, ul, ol, pre, blockquote) {
+    margin-block: 0.5rem;
+  }
+}
+
+/* Radix portals render at <body>, i.e. outside the Dockview pane that clips
+   its own content — that is exactly why menus escape the pane instead of
+   being cut off. They do need to sit above Dockview's stacking contexts. */
+[data-radix-popper-content-wrapper] {
+  z-index: 60;
+}
+
+/* ---- conversation geometry ----------------------------------------------
+ * The Dockview pane may be anything from a narrow sidebar to a cinema-wide
+ * editor column. A named inline-size container lets the React island adapt
+ * to the pane it actually has instead of the desktop window around it.
+ */
+.bakery-ai-panel {
+  container: bakery-agent-panel / inline-size;
+}
+
+/* The thread fills the pane from the left, its gutters growing with the
+   pane, and keeps room at its foot to scroll the last row clear of the
+   floating dock. Prose stops at a long measure only on very wide panes. */
+.bakery-ai-transcript-lane {
+  width: 100%;
+  min-height: 100%;
+  padding-inline: clamp(0.75rem, 3cqi, 2.5rem);
+  padding-bottom: calc(var(--bakery-dock-h, 0px) + 1rem);
+}
+.bakery-ai-transcript-lane .bakery-ai-prose :where(p, ul, ol, blockquote, h1, h2, h3, h4, h5, h6) {
+  max-width: 160ch;
+}
+
+/* The composer, the queue and the agent's questions: centered and wide,
+   the gutters beside them shrinking as the pane narrows. */
+.bakery-ai-control-lane {
+  width: min(100% - 2 * clamp(0.5rem, 4cqi, 4rem), 68rem);
+  margin-inline: auto;
+}
+
+.bakery-ai-composer {
+  position: relative;
+}
+
+/* The dock floats over the thread's foot. Only its surfaces are opaque and
+   take clicks; around them the thread scrolls on, visible, and clickable. */
+.bakery-ai-dock {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-bottom: 0.75rem;
+  pointer-events: none;
+}
+.bakery-ai-dock :is(.bakery-ai-prompt, .bakery-ai-surface) {
+  pointer-events: auto;
+}
+.bakery-ai-dock .bakery-ai-surface {
+  box-shadow: var(--shadow-chip);
+}
+/* A line under the composer (an error, an unsaved draft) on a surface of
+   its own, so it reads over whatever scrolls behind it. */
+.bakery-ai-dock-note {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.375rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--bad-border);
+  border-radius: var(--r-sm);
+  background: var(--bg-panel);
+}
+/* Clear of the dock, whatever its height. */
+.bakery-ai-scroll-end {
+  bottom: calc(var(--bakery-dock-h, 0px) + 0.75rem);
+  box-shadow: var(--shadow-chip);
+}
+
+.bakery-ai-prompt > [data-slot="input-group"] {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg-app);
+  box-shadow: none;
+}
+.bakery-ai-dock .bakery-ai-prompt > [data-slot="input-group"] {
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-chip);
+}
+
+.bakery-ai-prompt > [data-slot="input-group"]:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.bakery-ai-dock .bakery-ai-prompt > [data-slot="input-group"]:focus-within {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent),
+    var(--shadow-chip);
+}
+
+/* One row: the left tools shrink (their pills truncate) and the actions
+ * keep their size, so nothing wraps under the input. */
+.bakery-ai-composer-footer {
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+
+.bakery-ai-composer-tools-primary {
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.bakery-ai-composer-tools-actions {
+  flex: none;
+  flex-wrap: nowrap;
+}
+
+/* Only a very narrow pane stacks the actions under the tools. */
+@container bakery-agent-panel (max-width: 24rem) {
+  .bakery-ai-composer-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bakery-ai-composer-tools-actions {
+    justify-content: flex-end;
+  }
+}
+
+@container bakery-agent-panel (max-width: 28rem) {
+  .bakery-ai-composer-tools-primary {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.125rem;
+    scrollbar-width: none;
+  }
+
+  .bakery-ai-composer-tools-primary::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ---- transcript -----------------------------------------------------------
+ * Flat on purpose: rows are set apart by space, and by a coloured rule only
+ * where the colour means something — never by nested cards. Colour is only
+ * ever a theme.css token: `data-tone` picks a call's `--tool-*`, and
+ * `data-callout` the status colour of a row that wants a decision.
+ */
+@layer components {
+  .bakery-ai [data-tone="read"]   { --tone: var(--tool-read); }
+  .bakery-ai [data-tone="search"] { --tone: var(--tool-search); }
+  .bakery-ai [data-tone="edit"]   { --tone: var(--tool-edit); }
+  .bakery-ai [data-tone="exec"]   { --tone: var(--tool-exec); }
+  .bakery-ai [data-tone="fetch"]  { --tone: var(--tool-fetch); }
+  .bakery-ai [data-tone="bakery"] { --tone: var(--tool-bakery); }
+  .bakery-ai [data-tone="danger"] { --tone: var(--tool-danger); }
+  .bakery-ai [data-tone="other"]  { --tone: var(--tool-other); }
+
+  .bakery-ai [data-callout="warn"]  { --callout: var(--warn); }
+  .bakery-ai [data-callout="ok"]    { --callout: var(--ok); }
+  .bakery-ai [data-callout="bad"]   { --callout: var(--bad); }
+  .bakery-ai [data-callout="ask"]   { --callout: var(--violet); }
+  .bakery-ai [data-callout="quiet"] { --callout: var(--fg-faint); }
+
+  /* What the human sent: their exact words in a framed box, its time above. */
+  .bakery-ai .bakery-human {
+    min-width: 0;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: color-mix(in srgb, var(--bg-chip) 55%, var(--bg-panel));
+    color: var(--fg);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+  }
+  .bakery-ai .bakery-human-time {
+    align-self: flex-end;
+    font-size: 11px;
+    color: var(--fg-dim);
+  }
+
+  /* Sent by the node itself or by another agent: one muted line. */
+  .bakery-ai .bakery-peer {
+    display: flex;
+    min-width: 0;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--line-row);
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--bg-app) 60%, var(--bg-panel));
+    color: var(--fg-dim);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  /* ---- the timeline: what the agent does between two of yours ------- */
+  .bakery-ai .bakery-timeline {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    min-width: 0;
+    padding-left: 22px;
+  }
+  .bakery-ai .bakery-timeline::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 0.6rem;
+    bottom: 0.6rem;
+    width: 1px;
+    background: var(--line);
+  }
+  .bakery-ai .bakery-step {
+    position: relative;
+    min-width: 0;
+  }
+  .bakery-ai .bakery-step::before {
+    content: "";
+    position: absolute;
+    left: -22px;
+    top: 0.4rem;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--idle);
+    box-shadow: 0 0 0 3px var(--bg-panel);
+  }
+  .bakery-ai .bakery-step[data-dot="ok"]::before {
+    background: var(--ok);
+  }
+  .bakery-ai .bakery-step[data-dot="bad"]::before {
+    background: var(--bad);
+  }
+  .bakery-ai .bakery-step[data-dot="warn"]::before {
+    background: var(--warn);
+  }
+  .bakery-ai .bakery-step[data-dot="live"]::before {
+    box-shadow:
+      0 0 0 3px var(--bg-panel),
+      0 0 0 5px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .bakery-ai .bakery-human-file {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+    font-size: 11px;
+    color: var(--fg-faint);
+  }
+
+  /* A short coloured label: a tool kind, an event family. */
+  .bakery-ai .bakery-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.35rem;
+    border-radius: var(--r-xs);
+    background: color-mix(in srgb, var(--tone, var(--fg-dim)) 13%, transparent);
+    color: var(--tone, var(--fg-dim));
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.15rem;
+    white-space: nowrap;
+  }
+
+  /* A turn that ended without a reply, and why. */
+  .bakery-ai .bakery-notice {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--fg-dim);
+  }
+  .bakery-ai .bakery-notice-tag {
+    flex: none;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--callout);
+  }
+
+  /* ---- tool calls: a step each, opening onto exact input/output ---- */
+  .bakery-ai .bakery-tool {
+    min-width: 0;
+  }
+  /* The name in bold, a muted line under it, then the change side by side
+     or, folded, one line in and one line out. */
+  .bakery-ai .bakery-tool-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border-radius: var(--r-xs);
+    font-size: 12.5px;
+    line-height: 1.3rem;
+    text-align: left;
+    color: var(--fg-dim);
+  }
+  .bakery-ai .bakery-tool-line:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .bakery-ai .bakery-tool-verb {
+    flex: none;
+    font-weight: 700;
+    color: var(--fg);
+  }
+  /* Plain text until the operator decides what clicking it should open. */
+  .bakery-ai .bakery-tool-file {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-2);
+  }
+  /* An edit's file that opens in Code at the changed line. */
+  .bakery-ai .bakery-tool-file[data-link] {
+    color: var(--link);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--link) 40%, transparent);
+    text-underline-offset: 2px;
+  }
+  .bakery-ai .bakery-tool-file[data-link]:hover {
+    text-decoration-color: var(--link);
+  }
+  .bakery-ai .bakery-tool-sub {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--fg-dim);
+  }
+  .bakery-ai .bakery-tool-sub[data-failed] {
+    color: var(--diff-del-fg);
+  }
+  .bakery-ai .bakery-tool-status {
+    flex: none;
+    font-size: 11px;
+    color: var(--fg-faint);
+  }
+  .bakery-ai .bakery-tool[data-status="failed"] .bakery-tool-status {
+    color: var(--bad);
+  }
+  .bakery-ai .bakery-tool[data-status="unfinished"] .bakery-tool-status {
+    color: var(--warn);
+  }
+  .bakery-ai .bakery-tool-io {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    margin-top: 0.3rem;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--bg-app);
+    font-size: 11px;
+    text-align: left;
+  }
+  .bakery-ai .bakery-tool-io:hover {
+    border-color: var(--line-strong);
+  }
+  .bakery-ai .bakery-tool-io-row {
+    display: flex;
+    min-width: 0;
+  }
+  .bakery-ai .bakery-tool-io-row + .bakery-tool-io-row {
+    border-top: 1px solid var(--line-row);
+  }
+  .bakery-ai .bakery-tool-io-k {
+    flex: none;
+    width: 38px;
+    padding: 0.2rem 0;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .bakery-ai .bakery-tool-io-k[data-k="in"] {
+    background: var(--chip-teal-bg);
+    color: var(--chip-teal-fg);
+  }
+  .bakery-ai .bakery-tool-io-k[data-k="out"] {
+    background: color-mix(in srgb, var(--accent) 32%, var(--bg-app));
+    color: color-mix(in srgb, var(--accent) 22%, var(--fg));
+  }
+  .bakery-ai .bakery-tool-io-v {
+    min-width: 0;
+    padding: 0.2rem 0.6rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    color: var(--fg-body);
+  }
+  .bakery-ai .bakery-tool-chevron {
+    flex: none;
+    margin-left: auto;
+    color: var(--fg-ghost);
+    opacity: 0;
+    transition:
+      transform 0.12s ease,
+      opacity 0.12s ease;
+  }
+  .bakery-ai .bakery-tool-line:is(:hover, :focus-visible) .bakery-tool-chevron,
+  .bakery-ai .bakery-tool[data-state="open"] .bakery-tool-chevron {
+    opacity: 1;
+  }
+  .bakery-ai .bakery-tool[data-state="open"] .bakery-tool-chevron {
+    transform: rotate(90deg);
+  }
+  /* A command: one line, `$ command`, how it ended, and a chevron at its end
+     that opens the output in place. The line itself brings up the Agent
+     terminal. The chevron is always there: a phone has no hover. */
+  .bakery-ai .bakery-command-line {
+    display: flex;
+    flex: 1 1 0;
+    align-items: baseline;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0;
+    border-radius: var(--r-xs);
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-2);
+  }
+  .bakery-ai button.bakery-command-line {
+    cursor: pointer;
+  }
+  .bakery-ai button.bakery-command-line:hover {
+    color: var(--fg);
+  }
+  .bakery-ai button.bakery-command-line:focus-visible,
+  .bakery-ai .bakery-command-expand:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .bakery-ai .bakery-command-prompt {
+    flex: none;
+    font-weight: 700;
+    color: var(--tone);
+  }
+  .bakery-ai .bakery-command-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Open, the whole command shows, however long. */
+  .bakery-ai .bakery-command[data-state="open"] > .bakery-tool-line {
+    align-items: flex-start;
+  }
+  .bakery-ai .bakery-command[data-state="open"] .bakery-command-text {
+    overflow: visible;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .bakery-ai .bakery-command-expand {
+    display: grid;
+    flex: none;
+    place-items: center;
+    /* A bigger target than the icon, without a bigger row. */
+    margin: -0.2rem -0.3rem;
+    padding: 0.2rem 0.3rem;
+    border-radius: var(--r-xs);
+  }
+  .bakery-ai .bakery-command .bakery-tool-chevron {
+    margin-left: 0;
+    opacity: 1;
+  }
+  .bakery-ai .bakery-command-expand:hover .bakery-tool-chevron {
+    color: var(--fg-dim);
+  }
+  .bakery-ai .bakery-tool-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 0;
+    margin: 0.15rem 0 0.45rem 0.9rem;
+    padding: 0.4rem 0 0.2rem 0.85rem;
+    border-left: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
+  }
+  .bakery-ai .bakery-tool-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+  .bakery-ai .bakery-tool-label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .bakery-ai .bakery-tool-tag {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--tone, var(--accent-fg));
+  }
+  .bakery-ai .bakery-tool-note {
+    font-size: 12px;
+    color: var(--fg-dim);
+  }
+  .bakery-ai .bakery-tool-summary {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--fg-body);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .bakery-ai .bakery-tool-summary[data-failed] {
+    color: var(--bad);
+  }
+  .bakery-ai .bakery-tool-raw {
+    font-size: 11.5px;
+    color: var(--fg-faint);
+  }
+  .bakery-ai .bakery-tool-raw > summary {
+    width: fit-content;
+    cursor: pointer;
+  }
+  .bakery-ai .bakery-tool-raw > summary:hover {
+    color: var(--fg-dim);
+  }
+  .bakery-ai .bakery-tool-raw-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  /* ---- code and diffs ----------------------------------------------- */
+  .bakery-ai .bakery-code {
+    margin: 0;
+    max-height: 22rem;
+    overflow: auto;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-sm);
+    background: var(--bg-app);
+    color: var(--fg-body);
+    font-size: 11.5px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    tab-size: 2;
+  }
+  .bakery-ai .bakery-diff {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-sm);
+    background: var(--bg-app);
+  }
+  .bakery-ai .bakery-diff-head {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    padding: 0.25rem 0.6rem;
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--bg-raised);
+    font-size: 11px;
+    color: var(--fg-2);
+  }
+  .bakery-ai .bakery-diff-path {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+  }
+  .bakery-ai .bakery-diff-count {
+    flex: none;
+    margin-left: auto;
+    font-family: var(--font-mono);
+  }
+  .bakery-ai .bakery-diff-count [data-tag="add"] {
+    color: var(--diff-add-fg);
+  }
+  .bakery-ai .bakery-diff-count [data-tag="del"] {
+    color: var(--diff-del-fg);
+  }
+  .bakery-ai .bakery-diff-body {
+    margin: 0;
+    max-height: 18rem;
+    overflow: auto;
+    padding: 0.25rem 0;
+    font-size: 11.5px;
+    line-height: 1.55;
+  }
+  .bakery-ai .bakery-diff-line {
+    display: flex;
+    min-height: 1.55em;
+    padding: 0 0.75rem 0 0.35rem;
+    color: var(--fg-dim);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .bakery-ai .bakery-diff-line > span:last-child {
+    min-width: 0;
+  }
+  .bakery-ai .bakery-diff-sign {
+    flex: none;
+    width: 1.1rem;
+    text-align: center;
+    user-select: none;
+  }
+  .bakery-ai .bakery-diff-line[data-tag="add"] {
+    background: var(--diff-add-bg);
+    color: var(--diff-add-fg);
+  }
+  .bakery-ai .bakery-diff-line[data-tag="del"] {
+    background: var(--diff-del-bg);
+    color: var(--diff-del-fg);
+  }
+  .bakery-ai .bakery-diff-line[data-tag="gap"] {
+    color: var(--fg-faint);
+    font-style: italic;
+  }
+
+  /* A file change side by side: old on the left, new on the right,
+     hatching where a side has no line. */
+  .bakery-ai .bakery-split {
+    margin-top: 0.3rem;
+    max-height: 24rem;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--bg-app);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  .bakery-ai .bakery-split-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .bakery-ai .bakery-split-cell {
+    display: flex;
+    min-width: 0;
+    padding: 0 0.6rem 0 0.25rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--fg-2);
+  }
+  .bakery-ai .bakery-split-cell:first-child {
+    border-right: 1px solid var(--line);
+  }
+  .bakery-ai .bakery-split-cell[data-tag="del"] {
+    background: var(--diff-del-bg);
+    color: var(--diff-del-text);
+  }
+  .bakery-ai .bakery-split-cell[data-tag="add"] {
+    background: var(--diff-add-bg);
+    color: var(--diff-add-text);
+  }
+  .bakery-ai .bakery-split-cell[data-tag="none"] {
+    background: var(--diff-filler);
+  }
+  .bakery-ai .bakery-split-mark {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin: 0.6em 0.45rem 0 0.15rem;
+    border: 1px solid currentColor;
+    opacity: 0.55;
+  }
+  .bakery-ai .bakery-split-cell[data-tag="same"] .bakery-split-mark {
+    visibility: hidden;
+  }
+  .bakery-ai .bakery-split-text {
+    min-width: 0;
+  }
+  .bakery-ai .bakery-split-gap {
+    padding: 0 0.6rem;
+    border-block: 1px solid var(--line-row);
+    color: var(--fg-faint);
+    font-style: italic;
+  }
+
+  /* ---- live work ------------------------------------------------------ */
+  .bakery-ai .bakery-activity {
+    font-size: 12px;
+  }
+  .bakery-ai .bakery-activity-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-width: 0;
+    padding: 0.2rem 0.45rem;
+    border-radius: var(--r-xs);
+    text-align: left;
+    color: var(--fg-dim);
+  }
+  .bakery-ai .bakery-activity-line:hover {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+  .bakery-ai .bakery-activity-title {
+    flex: none;
+    font-weight: 600;
+    color: var(--accent-fg);
+  }
+  .bakery-ai .bakery-activity[data-waiting] .bakery-activity-title {
+    color: var(--warn);
+  }
+  .bakery-ai .bakery-activity-line:disabled:hover {
+    background: transparent;
+  }
+  .bakery-ai .bakery-activity-now {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bakery-ai .bakery-activity-now code {
+    font-size: 11.5px;
+    color: var(--fg-2);
+  }
+  .bakery-ai .bakery-activity-count {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.2rem;
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--fg-faint);
+  }
+  .bakery-ai .bakery-activity-chevron {
+    transition: transform 0.12s ease;
+  }
+  .bakery-ai .bakery-activity[data-state="open"] .bakery-activity-chevron {
+    transform: rotate(90deg);
+  }
+  .bakery-ai .bakery-activity-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+    margin: 0.1rem 0 0.2rem 0.9rem;
+    padding: 0.15rem 0 0.15rem 0.85rem;
+    border-left: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    color: var(--fg-dim);
+  }
+  .bakery-ai .bakery-activity-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+  .bakery-ai .bakery-activity-item code {
+    font-size: 11.5px;
+    color: var(--fg-2);
+  }
+  .bakery-ai .bakery-activity-item[data-failed] code {
+    color: var(--bad);
+  }
+}
+
+/* ---- callouts: a row that asks for, or records, a decision ---------------
+ * Unlayered on purpose. A permission request and a file change are AI
+ * Elements `Confirmation`s, i.e. shadcn `Alert`s — a bordered card with its
+ * own padding, type size, and `items-start` — and those are utilities, which
+ * outrank anything in a layer. Here the callout look wins instead.
+ */
+.bakery-ai .bakery-callout {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--callout) 50%, var(--line));
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--callout) 8%, var(--bg-panel));
+  color: inherit;
+  font-size: 13px;
+}
+.bakery-ai .bakery-callout-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.bakery-ai .bakery-callout-icon {
+  flex: none;
+  color: var(--callout);
+}
+.bakery-ai .bakery-callout-title {
+  font-size: inherit;
+  font-weight: 600;
+  color: var(--fg);
+}
+.bakery-ai .bakery-callout-outcome {
+  font-size: 11.5px;
+  color: var(--callout);
+}
+.bakery-ai [data-callout="quiet"] .bakery-callout-outcome {
+  color: var(--fg-dim);
+}
+
+/* ---- subagents: a helper an agent launched (Claude's Agent call) ---------
+ * One card: what it was asked to do, its steps and words, what it handed
+ * back. The parent's own reply continues below it.
+ */
+.bakery-ai .bakery-subagent {
+  min-width: 0;
+  padding: 0.4rem 0.65rem;
+  border-left: 2px solid var(--line-soft);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: color-mix(in srgb, var(--fg-dim) 6%, transparent);
+  font-size: 13px;
+}
+.bakery-ai .bakery-subagent[data-status="running"] {
+  border-left-color: var(--accent);
+}
+.bakery-ai .bakery-subagent[data-status="failed"] {
+  border-left-color: var(--bad);
+}
+.bakery-ai .bakery-subagent-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--fg-dim);
+  text-align: left;
+  cursor: pointer;
+}
+.bakery-ai .bakery-subagent-head:hover {
+  color: var(--fg);
+}
+.bakery-ai .bakery-subagent-meta {
+  margin-left: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Agent map: every agent and who started whom -------------------------- */
+.bakery-agent-map {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-app);
+  color: var(--fg);
+  font-family: var(--font-ui);
+}
+.bakery-agent-map-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.bakery-agent-map-bar > span:first-child {
+  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bakery-agent-map-bar button {
+  display: inline-flex;
+  padding: 0.2rem;
+  border-radius: var(--r-xs);
+  color: var(--fg-dim);
+}
+.bakery-agent-map-bar button:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg-dim) 12%, transparent);
+}
+.bakery-agent-map-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+.bakery-agent-map-empty {
+  padding: 1rem;
+  font-size: 13px;
+  color: var(--fg-dim);
+}
+.bakery-agent-map-view {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+.bakery-agent-map-view:active {
+  cursor: grabbing;
+}
+.bakery-agent-map-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+.bakery-agent-map-edges {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.bakery-agent-map-edges path {
+  fill: none;
+  stroke: var(--line-soft);
+  stroke-width: 1.5;
+}
+.bakery-agent-map-edges path[data-status="working"] {
+  stroke: var(--accent);
+}
+.bakery-agent-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--bg-raised);
+  text-align: left;
+  cursor: pointer;
+}
+.bakery-agent-node:hover {
+  border-color: var(--fg-dim);
+}
+.bakery-agent-node[data-kind="subagent"] {
+  border-style: dashed;
+  border-left-style: solid;
+}
+.bakery-agent-node[data-status="working"] {
+  border-left-color: var(--accent);
+}
+.bakery-agent-node[data-status="needs_input"] {
+  border-left-color: var(--warn);
+}
+.bakery-agent-node[data-status="failed"] {
+  border-left-color: var(--bad);
+}
+.bakery-agent-node-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.bakery-agent-node-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bakery-agent-node-dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--fg-faint);
+}
+.bakery-agent-node[data-status="working"] .bakery-agent-node-dot {
+  background: var(--accent);
+  animation: bakery-agent-pulse 1.2s ease-in-out infinite;
+}
+.bakery-agent-node[data-status="needs_input"] .bakery-agent-node-dot {
+  background: var(--warn);
+}
+.bakery-agent-node[data-status="failed"] .bakery-agent-node-dot {
+  background: var(--bad);
+}
+.bakery-agent-node-line {
+  overflow: hidden;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@keyframes bakery-agent-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bakery-agent-node[data-status="working"] .bakery-agent-node-dot {
+    animation: none;
+  }
+}
+
+/* ---- replies (Streamdown) ------------------------------------------------
+ * Streamdown styles its blocks with utility classes, rounded cards, and a
+ * `bg-sidebar` colour this panel does not define. These rules restate them
+ * in the panel's own terms. Unlayered, so they win over the utilities
+ * without `!important`.
+ */
+.bakery-ai-prose {
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+/* Streamdown sizes headings `text-sm`…`text-3xl` (14–30px) with `mt-6`
+   above them — a shout inside a 14px reply. Here they step up from the
+   body instead, and a reply that opens with one starts flush. */
+.bakery-ai-prose [data-streamdown^="heading-"] {
+  margin-block: 0.9rem 0.35rem;
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.bakery-ai-prose [data-streamdown="heading-1"] {
+  font-size: 1.15em;
+}
+.bakery-ai-prose [data-streamdown="heading-2"] {
+  font-size: 1.08em;
+}
+.bakery-ai-prose > [data-streamdown^="heading-"]:first-child {
+  margin-top: 0;
+}
+.bakery-ai-prose :where(strong) {
+  font-weight: 600;
+  color: var(--fg);
+}
+.bakery-ai-prose :where(h1, h2, h3, h4, h5, h6) {
+  color: var(--fg);
+}
+.bakery-ai-prose :where(li)::marker {
+  color: color-mix(in srgb, var(--accent-fg) 70%, transparent);
+}
+.bakery-ai-prose :where(li + li) {
+  margin-top: 0.15rem;
+}
+.bakery-ai-prose [data-streamdown="inline-code"] {
+  padding: 0.1em 0.35em;
+  border-radius: var(--r-xs);
+  background: var(--bg-chip);
+  color: var(--syntax-type);
+  font-size: 0.86em;
+}
+.bakery-ai-prose [data-streamdown="link"] {
+  color: var(--accent-fg);
+  font-weight: 500;
+  text-decoration: none;
+}
+.bakery-ai-prose [data-streamdown="link"]:hover {
+  text-decoration: underline;
+}
+.bakery-ai-prose [data-streamdown="blockquote"] {
+  margin-block: 0.5rem;
+  padding-left: 0.8rem;
+  border-left: 2px solid var(--line-strong);
+  color: var(--fg-dim);
+  font-style: normal;
+}
+.bakery-ai-prose [data-streamdown="horizontal-rule"] {
+  height: 0;
+  margin-block: 1rem;
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.bakery-ai [data-streamdown="code-block"] {
+  gap: 0;
+  margin-block: 0.65rem;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--bg-app);
+}
+.bakery-ai [data-streamdown="code-block-header"] {
+  height: 1.8rem;
+  padding: 0 0.7rem;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-raised);
+  font-size: 11px;
+}
+.bakery-ai [data-streamdown="code-block-header"] > span {
+  margin-left: 0;
+  font-weight: 500;
+  color: var(--accent-fg);
+}
+/* The copy control sits in the header row. It is sticky, so down a long
+   fence it rides over the code — on the header's own surface, not a card. */
+.bakery-ai [data-streamdown="code-block"] > div:has(> [data-streamdown="code-block-actions"]) {
+  top: 0;
+  height: 1.8rem;
+  margin-top: -1.8rem;
+  padding-right: 0.3rem;
+}
+.bakery-ai [data-streamdown="code-block-actions"] {
+  gap: 0.1rem;
+  padding: 0 0.15rem;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: var(--bg-raised);
+  backdrop-filter: none;
+}
+.bakery-ai [data-streamdown="code-block-body"] {
+  padding: 0.6rem 0.8rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.bakery-ai [data-streamdown="table-wrapper"] {
+  gap: 0;
+  margin-block: 0.65rem;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: transparent;
+}
+.bakery-ai [data-streamdown="table-wrapper"] > div {
+  border: 0;
+  border-radius: 0;
+}
+.bakery-ai [data-streamdown="table"] {
+  border: 0;
+}
+.bakery-ai [data-streamdown="table-header"] {
+  background: var(--bg-raised);
+}
+.bakery-ai [data-streamdown="table-header-cell"] {
+  padding: 0.35rem 0.7rem;
+  font-size: 12px;
+  color: var(--fg);
+}
+.bakery-ai [data-streamdown="table-cell"] {
+  padding: 0.35rem 0.7rem;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12.5px;
+}
+
+/* ---- visual blocks: diagrams, charts, artifacts, GenUI --------------------
+ * One frame for each: the fence's language as the agent wrote it, what the
+ * visual says it is, its views and its actions, over the visual. Unlayered
+ * and without the `.bakery-ai` scope, because the same frame header heads
+ * the large view in a dialog, which renders outside the panel.
+ */
+.bakery-visual {
+  --tone: var(--accent-fg);
+  margin-block: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2xl);
+  background: var(--bg-app);
+  box-shadow: var(--shadow-chip);
+}
+.bakery-visual[data-kind="mermaid"] {
+  --tone: var(--violet);
+}
+.bakery-visual:is([data-kind="html"], [data-kind="svg"]) {
+  --tone: var(--syntax-string);
+}
+.bakery-visual-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 2.1rem;
+  padding: 0.25rem 0.35rem 0.25rem 0.75rem;
+  border-bottom: 1px solid var(--line-soft);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--tone) 10%, transparent), transparent 45%),
+    var(--grad-chrome);
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--fg-dim);
+}
+.bakery-visual-icon {
+  color: var(--tone);
+}
+.bakery-visual-kind {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--tone);
+}
+.bakery-visual-detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-2);
+}
+.bakery-visual-note {
+  flex: none;
+  color: var(--fg-faint);
+}
+.bakery-visual-note[data-bad] {
+  color: var(--bad);
+}
+.bakery-visual-views {
+  display: inline-flex;
+  flex: none;
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--bg-app);
+}
+.bakery-visual-views > button {
+  padding: 0.12rem 0.55rem;
+  border-radius: var(--r-xs);
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.bakery-visual-views > button:hover {
+  color: var(--fg);
+}
+.bakery-visual-views > button[aria-pressed="true"] {
+  background: var(--grad-button);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--fg);
+}
+.bakery-visual-action {
+  display: inline-flex;
+  flex: none;
+  padding: 0.3rem;
+  border-radius: var(--r-sm);
+  color: var(--fg-faint);
+}
+.bakery-visual-action:hover {
+  background: var(--bg-chip);
+  color: var(--fg);
+}
+.bakery-visual-action:focus-visible,
+.bakery-visual-views > button:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+.bakery-visual-body {
+  position: relative;
+  min-width: 0;
+}
+/* The source view: the fence's exact text, flush in the frame. */
+.bakery-visual-body > .bakery-code {
+  max-height: 26rem;
+  border: 0;
+  border-radius: 0;
+}
+.bakery-visual-error {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--bad-border);
+  background: var(--bad-bg);
+  color: var(--bad);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* A drawing on a dotted canvas, scrolling when it is larger than the frame. */
+.bakery-visual-canvas {
+  display: flex;
+  justify-content: center;
+  max-height: 34rem;
+  overflow: auto;
+  padding: 1.25rem 1rem;
+  background-color: var(--bg-app);
+  background-image: radial-gradient(color-mix(in srgb, var(--fg) 9%, transparent) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+.bakery-visual-canvas > img {
+  flex: none;
+  max-width: 100%;
+  height: auto;
+}
+.bakery-visual-canvas[data-large] {
+  align-items: flex-start;
+  height: 100%;
+  max-height: none;
+}
+.bakery-visual-canvas[data-large] > img {
+  max-width: none;
+}
+
+/* A chart: hairline grid, thin marks, text in text colours only. */
+.bakery-chart {
+  padding: 0.75rem 0.9rem 0.45rem;
+}
+.bakery-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  margin-bottom: 0.45rem;
+  font-size: 11.5px;
+  color: var(--fg-2);
+}
+.bakery-chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.bakery-chart-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.bakery-chart-swatch[data-line] {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+}
+.bakery-chart-plot {
+  position: relative;
+}
+.bakery-chart-svg {
+  display: block;
+  overflow: visible;
+  font-family: var(--font-ui);
+}
+.bakery-chart-svg:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+.bakery-chart-grid,
+.bakery-chart-zero,
+.bakery-chart-cross {
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.bakery-chart-grid {
+  stroke: var(--line-soft);
+}
+.bakery-chart-zero {
+  stroke: var(--line-strong);
+}
+.bakery-chart-cross {
+  stroke: var(--fg-faint);
+}
+.bakery-chart-band {
+  fill: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.bakery-chart-tick {
+  fill: var(--fg-faint);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+.bakery-chart-end {
+  fill: var(--fg-2);
+  font-size: 11px;
+  font-weight: 600;
+}
+.bakery-chart-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.bakery-chart-dot,
+.bakery-chart-slice {
+  stroke: var(--bg-app);
+  stroke-width: 2;
+}
+.bakery-chart-svg path {
+  transition: opacity 0.12s ease;
+}
+.bakery-chart-svg [data-dim] {
+  opacity: 0.42;
+}
+.bakery-chart-tip {
+  position: absolute;
+  top: 2px;
+  z-index: 1;
+  min-width: 7rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-menu);
+  font-size: 11.5px;
+  pointer-events: none;
+}
+.bakery-chart-tip-head {
+  margin-bottom: 0.25rem;
+  color: var(--fg-dim);
+}
+.bakery-chart-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+  color: var(--fg-dim);
+}
+.bakery-chart-tip-row strong,
+.bakery-chart-slices strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.bakery-chart-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem 2.5rem;
+  padding-block: 0.25rem;
+}
+.bakery-chart-center {
+  fill: var(--fg-dim);
+  font-size: 11px;
+}
+.bakery-chart-center-value {
+  fill: var(--fg);
+  font-size: 18px;
+  font-weight: 600;
+}
+.bakery-chart-slices {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: min(100%, 17rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+.bakery-chart-slices > li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto 3.4rem;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.22rem 0.45rem;
+  border-radius: var(--r-sm);
+}
+.bakery-chart-slices > li[data-active] {
+  background: var(--bg-chip);
+}
+.bakery-chart-slices strong,
+.bakery-chart-share {
+  text-align: right;
+}
+.bakery-chart-share {
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.bakery-chart-slice-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A table in a frame: a chart's values, a GenUI table. */
+.bakery-visual-scroll {
+  max-height: 22rem;
+  overflow: auto;
+}
+.bakery-visual-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.bakery-visual-table th {
+  position: sticky;
+  top: 0;
+  padding: 0.38rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-raised);
+  color: var(--fg);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+.bakery-visual-table td {
+  padding: 0.32rem 0.75rem;
+  border-top: 1px solid var(--line-row);
+  color: var(--fg-body);
+  vertical-align: top;
+}
+.bakery-visual-table [data-num] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.bakery-visual-table tbody tr:hover {
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+
+/* GenUI: cards, metrics, progress, lists, tables and key-values, in the
+   panel's own surfaces. A part's tone (ok, warn, bad, info, accent, muted)
+   is `--g`, and only status chips and marks wear it. */
+.bakery-visual[data-kind="genui"] {
+  --tone: var(--hue-containers);
+}
+.bakery-genui {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  font-size: 12.5px;
+  color: var(--fg-body);
+}
+.bakery-genui [data-tone="ok"] { --g: var(--ok); }
+.bakery-genui [data-tone="warn"] { --g: var(--warn); }
+.bakery-genui [data-tone="bad"] { --g: var(--bad); }
+.bakery-genui [data-tone="info"] { --g: var(--accent-fg); }
+.bakery-genui [data-tone="accent"] { --g: var(--accent); }
+.bakery-genui [data-tone="muted"] { --g: var(--fg-faint); }
+.bakery-genui-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-width: 0;
+}
+.bakery-genui-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.75rem 0.85rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--g, var(--line)) 45%, var(--line));
+  border-top: 2px solid var(--g, var(--line-strong));
+  border-radius: var(--r-xl);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--g, var(--fg)) 6%, var(--bg-panel)), var(--bg-panel) 3.5rem);
+  box-shadow: var(--shadow-chip);
+}
+.bakery-genui-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.6rem;
+}
+.bakery-genui-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.bakery-genui-sub,
+.bakery-genui-note,
+.bakery-genui-detail {
+  font-size: 11.5px;
+  color: var(--fg-dim);
+}
+.bakery-genui-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.6rem;
+}
+.bakery-genui-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--g, var(--line-strong));
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+}
+.bakery-genui-label {
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.bakery-genui-value {
+  overflow: hidden;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg);
+}
+.bakery-genui-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.bakery-genui-delta {
+  padding: 0 0.35rem;
+  border-radius: var(--r-xs);
+  background: color-mix(in srgb, var(--g, var(--fg-dim)) 16%, transparent);
+  color: color-mix(in srgb, var(--g, var(--fg-dim)) 70%, var(--fg));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.bakery-genui-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.bakery-genui-progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.bakery-genui-progress-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.bakery-genui-track {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--g, var(--accent)) 14%, var(--bg-chip));
+}
+.bakery-genui-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--g, var(--accent)) 70%, transparent), var(--g, var(--accent)));
+}
+.bakery-genui-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bakery-genui-list > li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  min-width: 0;
+}
+.bakery-genui-mark {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--g, var(--line-strong));
+  transform: translateY(-0.05rem);
+}
+ol.bakery-genui-list .bakery-genui-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  background: color-mix(in srgb, var(--g, var(--fg-dim)) 18%, var(--bg-chip));
+  color: var(--fg-2);
+  font-size: 10.5px;
+  font-weight: 600;
+  transform: none;
+}
+.bakery-genui-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bakery-genui-table {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+}
+.bakery-genui-kv {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+}
+.bakery-genui-kv > div {
+  display: contents;
+}
+.bakery-genui-kv dt,
+.bakery-genui-kv dd {
+  margin: 0;
+  padding: 0.32rem 0.75rem;
+  border-top: 1px solid var(--line-row);
+}
+.bakery-genui-kv > div:first-child > :is(dt, dd) {
+  border-top: 0;
+}
+.bakery-genui-kv dt {
+  background: var(--bg-raised);
+  color: var(--fg-dim);
+}
+.bakery-genui-kv dd {
+  overflow-wrap: anywhere;
+  color: var(--fg);
+}
+/* A table or key-values with a tone wears it down its edge, as a metric
+   does; a list's tone colours its marks. */
+.bakery-genui-table[data-tone],
+.bakery-genui-kv[data-tone] {
+  border-color: color-mix(in srgb, var(--g) 45%, var(--line-soft));
+  border-left: 3px solid var(--g);
+}
+.bakery-genui-unknown {
+  align-self: flex-start;
+  padding: 0.15rem 0.45rem;
+  border: 1px dashed var(--bad-border);
+  border-radius: var(--r-xs);
+  color: var(--bad);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* An artifact on a page of its own, light as pages are by default: its
+   colours are its own, whatever the scheme around it. */
+.bakery-artifact-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  color-scheme: light;
+  background: Canvas;
+}
+.bakery-artifact-frame[data-large] {
+  height: 100%;
+}
+
+/* The large view. */
+.bakery-visual-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: min(96vw, 1400px);
+  max-width: none;
+  height: 88vh;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-2xl);
+  background: var(--bg-app);
+  box-shadow: var(--shadow-modal);
+}
+.bakery-visual-dialog > .bakery-visual-head {
+  padding-right: 2.75rem;
+}
+.bakery-visual-dialog-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.bakery-visual-dialog-body > .bakery-chart {
+  padding: 1.25rem 1.5rem;
+}
+
+@container bakery-agent-panel (max-width: 28rem) {
+  .bakery-ai .bakery-tool-body {
+    margin-left: 0.5rem;
+    padding-left: 0.6rem;
+  }
+
+  .bakery-ai .bakery-human,
+  .bakery-ai .bakery-callout {
+    padding-inline: 0.6rem;
+  }
+
+  .bakery-ai [data-streamdown="code-block-body"] {
+    padding-inline: 0.6rem;
+  }
+}
+
+/* ---- the bakery glyphs (Round 5, M2) ---------------------------------------
+ * Each thread state its own shape and motion, the same on every surface:
+ * dough rising (thinking), a rolling pin (working), a piping bag (writing),
+ * a bell (needs you), a loaf that steams once (done), two doughs pressing
+ * into one (ready to merge). Only live states loop; the merge invitation
+ * presses three times as it appears and rests pressed, so a thread left
+ * ready to merge never keeps the window drawing every frame.
+ */
+.bk-glyph {
+  flex: none;
+  overflow: visible;
+}
+.bk-needs {
+  transform-origin: 50% 20%;
+  animation: bk-ring 1.8s ease-in-out infinite;
+}
+.bk-working {
+  animation: bk-roll 1s ease-in-out infinite;
+}
+.bk-thinking .bk-puff {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: bk-rise 2.4s ease-in-out infinite;
+}
+.bk-writing .bk-ink {
+  stroke-dasharray: 8;
+  animation: bk-ink 1.4s linear infinite;
+}
+.bk-ready .bk-l {
+  animation: bk-join-l 3.6s ease-in-out 3 forwards;
+}
+.bk-ready .bk-r {
+  animation: bk-join-r 3.6s ease-in-out 3 forwards;
+}
+.bk-done .bk-steam {
+  opacity: 0;
+  animation: bk-steam 2.4s ease-out 1;
+}
+.bk-failed {
+  animation: bk-shake 0.6s ease-in-out 1;
+}
+@keyframes bk-ring {
+  0%, 60%, 100% { transform: rotate(0); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-12deg); }
+  30% { transform: rotate(8deg); }
+  40% { transform: rotate(-4deg); }
+}
+@keyframes bk-roll {
+  0%, 100% { transform: translateX(-1.5px); }
+  50% { transform: translateX(1.5px); }
+}
+@keyframes bk-rise {
+  0%, 100% { transform: scaleY(0.8); }
+  50% { transform: scaleY(1.1); }
+}
+@keyframes bk-ink {
+  from { stroke-dashoffset: 8; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes bk-join-l {
+  0%, 15% { transform: translateX(0); }
+  55%, 100% { transform: translateX(2.4px); }
+}
+@keyframes bk-join-r {
+  0%, 15% { transform: translateX(0); }
+  55%, 100% { transform: translateX(-2.4px); }
+}
+@keyframes bk-steam {
+  0% { opacity: 0; transform: translateY(2px); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-2px); }
+}
+@keyframes bk-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-1.5px); }
+  50% { transform: translateX(1.5px); }
+  75% { transform: translateX(-1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bk-glyph,
+  .bk-glyph * {
+    animation: none !important;
+  }
+}

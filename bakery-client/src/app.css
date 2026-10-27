@@ -1,0 +1,87 @@
+/* ---- Fonts ----------------------------------------------------------------
+   JetBrains Mono is the only web font shipped.
+   Required:  static/fonts/JetBrainsMono-Regular.woff2
+   Optional:  static/fonts/JetBrainsMono-Medium.woff2
+   UI text uses the OS system-ui stack — no Inter download needed.        */
+
+@import "./lib/styles/theme.css";
+/* Tailwind utilities for the React agent panel ONLY — no preflight, scoped
+   reset, `@source` limited to the island. See that file's own header for
+   why each of those is load-bearing. */
+@import "./lib/styles/ai-panel.css";
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---- Type tokens (theme.css owns color; fonts stay here) ------------------ */
+
+:root {
+  --font-ui:   system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace;
+}
+
+/* ---- Reset ---------------------------------------------------------------- */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-app);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Links ---------------------------------------------------------------- */
+
+a {
+  color: var(--accent-fg);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* ---- Scrollbar ------------------------------------------------------------ */
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ---- Placeholder ---------------------------------------------------------- */
+
+::placeholder {
+  color: var(--fg-fainter);
+  opacity: 1;
+}

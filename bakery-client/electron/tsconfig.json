@@ -1,0 +1,17 @@
+{
+  // The desktop shell's own type check (check:electron). esbuild bundles
+  // main.ts and preload.ts; the rest also runs under plain node.
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "target": "es2023",
+    "lib": ["es2023"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "include": ["*.ts"]
+}

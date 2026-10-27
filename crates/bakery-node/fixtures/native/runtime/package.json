@@ -1,0 +1,9 @@
+{
+  "name": "bakery-native-fixture-runtime",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Frozen, integrity-verified runtime for the native-runtime demo. Assembled with `npm ci` and then patched with Bakery's adapter patch. Not published.",
+  "dependencies": {
+    "@agentclientprotocol/claude-agent-acp": "0.76.0"
+  }
+}

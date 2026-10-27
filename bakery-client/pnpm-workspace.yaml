@@ -1,0 +1,18 @@
+# Allow esbuild (a vite dependency) to run its install script so its native
+# binary is fetched — otherwise `vite build` fails.
+allowBuilds:
+  esbuild: true
+  # pnpm wants a decision on electron, but Electron 44 has no install script
+  # to run: its binary comes from its own installer (`install-electron`,
+  # which electron:pack runs and deploy checks) or on first use.
+  electron: true
+  # Windows installers only (an electron-builder dependency); never built here.
+  electron-winstaller: false
+
+# pnpm holds back a release younger than a day; this one was pinned on its
+# first day (Claude Code 2.1.296's SDK). Harmless once it is older.
+minimumReleaseAgeExclude:
+  - '@agentclientprotocol/claude-agent-acp@0.90.0'
+
+patchedDependencies:
+  '@agentclientprotocol/claude-agent-acp@0.90.0': patches/@agentclientprotocol__claude-agent-acp@0.90.0.patch

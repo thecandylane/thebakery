@@ -1,0 +1,77 @@
+[package]
+name = "bakery-node"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+default-run = "bakery-node"
+
+[dependencies]
+bakery-core = { path = "../bakery-core" }
+bakery-heart = { path = "../bakery-heart" }
+bakery-agent = { path = "../bakery-agent" }
+bakery-exec = { path = "../bakery-exec" }
+blake3 = { workspace = true }
+rusqlite = { workspace = true }
+axum = { version = "0.8", features = ["ws"] }
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6", features = ["cors"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = "0.10"
+# A provisioning profile's certificates, matched to the operator's signing
+# identities (iphone.rs). Both were already in the tree, under axum.
+sha1 = "0.10"
+base64 = "0.22"
+# The swap at the door sends a sign-in host's requests on over TLS, trusting
+# the public roots (swap.rs). Already in the tree, under ureq and reqwest.
+webpki-roots = "1"
+# The door's own certificate authority for the sign-in hosts it answers
+# itself (swap_tls.rs); on ring, as rustls is here.
+rcgen = { version = "0.13", default-features = false, features = ["ring", "pem"] }
+chrono = "0.4"
+portable-pty = "0.9"
+libc = "0.2"
+# One machine-wide compile budget: a GNU make jobserver of two tokens,
+# shared by every room (`builds`).
+jobserver = "0.1"
+# The prompt response's per-turn token usage is behind this feature in the
+# pinned crate; it adds no dependency.
+agent-client-protocol = { version = "=2.2.0", features = ["unstable_end_turn_token_usage", "unstable_session_compaction"] }
+futures = "0.3"
+tokio-util = { version = "0.7", features = ["compat"] }
+ureq = { version = "2", features = ["json"] }
+# The Baker's tools: request schemas for the route catalog, and in-process
+# calls through the node's own router. Both were already in the tree.
+schemars = "1"
+tower = { version = "0.5", features = ["util"] }
+# The seats' gateway tunnels HTTPS (CONNECT); both come in with axum.
+hyper = { version = "1", features = ["server", "client", "http1"] }
+# The tailnet listener's TLS (devices.rs), with Tailscale's certificate. Both
+# were already in the tree, under reqwest.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+# A project's Cargo.toml, pyproject.toml and Codex settings, read for its
+# control plane; bakery-exec already uses it.
+toml = "1"
+
+# build.rs reads the Claude adapter pin from bakery-client's package.json.
+[build-dependencies]
+serde_json = { workspace = true }
+
+[[bin]]
+name = "bakery-fake-acp-agent"
+path = "src/bin/fake_acp_agent.rs"
+test = false
+bench = false
+
+[dev-dependencies]
+tempfile = "3"
+tokio-tungstenite = "0.29"
+futures-util = { version = "0.3", default-features = false }
+# Enables bakery-agent's `BAKERY_SECRETS_PATH_FOR_TEST` override (see that
+# crate's `test-util` feature doc comment) for bakery-node's own tests
+# (routes/seats.rs) — resolver "2" keeps this out of `cargo build`.
+bakery-agent = { path = "../bakery-agent", features = ["test-util"] }
+tiny_http = { version = "0.12.0", default-features = false }

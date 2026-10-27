@@ -1,0 +1,373 @@
+/* ---- Machine access: one look for Settings → Machine access and a
+   project's Environment card ---------------------------------------------
+   Imported by the components that show it (MachineAccessPanel,
+   MachineGrants, ProjectEnvironment, CheckResult); every selector is scoped
+   under `.ma`, the class their root carries, so nothing reaches the rest of
+   the app. Colour only ever comes from theme.css tokens. The project page
+   sits outside the Settings window, so sizes are plain values here, not the
+   window's `--set-*` ones. */
+
+.ma .card {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2xl);
+  background: linear-gradient(180deg, var(--bg-raised), var(--bg-panel) 44px);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 4%, transparent), var(--shadow-chip);
+  overflow: hidden;
+}
+.ma .grp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--fg) 2%, transparent);
+  font: 600 10.5px/1 var(--font-ui);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.ma .grp:first-child { border-top: 0; }
+.ma .row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  min-width: 0;
+  padding: 9px 14px;
+  border-top: 1px solid var(--line-soft);
+  font: 400 12px/1.5 var(--font-ui);
+}
+.ma .row.inherit { opacity: 0.6; }
+.ma .who { flex: 1 1 160px; min-width: 0; display: flex; align-items: center; gap: 8px; color: var(--fg-2); }
+.ma .who .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ma .dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--fg-ghost); }
+.ma .dot.live { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg); }
+.ma .tag {
+  flex: none;
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-chip);
+  color: var(--fg-dim);
+  font: 600 10.5px/1.2 var(--font-ui);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.ma .tag.baker {
+  border-color: var(--baker-border);
+  background: color-mix(in srgb, var(--baker-solid) 24%, transparent);
+  color: color-mix(in srgb, var(--violet) 70%, var(--fg));
+}
+.ma .tag.orc { border-color: var(--accent-border); background: var(--accent-bg); color: var(--accent-fg); }
+.ma .n {
+  min-width: 18px;
+  padding: 2px 6px;
+  border-radius: var(--r-pill);
+  background: var(--bg-chip);
+  color: var(--fg-faint);
+  font: 600 10.5px/1.2 var(--font-ui);
+  text-align: center;
+}
+
+/* The save state: saved, saving, or refused with the node's reason. */
+.ma .state {
+  max-width: 60%;
+  padding: 5px 11px;
+  border: 1px solid var(--ok-border);
+  border-radius: var(--r-pill);
+  background: var(--ok-bg);
+  color: var(--ok);
+  font: 600 11.5px/1.2 var(--font-ui);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ma .state.busy { border-color: var(--line); background: var(--bg-chip); color: var(--fg-dim); }
+.ma .state.bad { border-color: var(--bad-border); background: var(--bad-bg); color: var(--bad); }
+
+/* ---- segmented controls: where an agent runs, a folder's access ---------- */
+
+.ma .seg {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  background: var(--bg-app);
+}
+.ma .seg button {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: none;
+  color: var(--fg-faint);
+  font: 500 11.5px/1 var(--font-ui);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ma .seg button:hover:not(.on):not(:disabled) { background: var(--bg-chip); color: var(--fg-2); }
+.ma .seg button:disabled { cursor: default; }
+.ma .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ma .seg button.on[data-v="host_full"] {
+  color: var(--warn);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--warn) 34%, transparent), color-mix(in srgb, var(--warn) 12%, transparent));
+  box-shadow: inset 0 0 0 1px var(--warn-border);
+}
+.ma .seg button.on[data-v="host_room"],
+.ma .seg.acc button.on {
+  color: var(--accent-fg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 32%, transparent), color-mix(in srgb, var(--accent) 10%, transparent));
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+}
+.ma .seg button.on[data-v="container"] {
+  color: var(--violet);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--violet) 32%, transparent), color-mix(in srgb, var(--violet) 10%, transparent));
+  box-shadow: inset 0 0 0 1px var(--baker-border);
+}
+.ma .seg button.on[data-v="locked"] {
+  color: var(--fg-2);
+  background: linear-gradient(180deg, var(--bg-raised), var(--bg-chip));
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+/* ---- tools, folders, variables ------------------------------------------- */
+
+.ma .sub-h {
+  margin: 18px 0 8px;
+  font: 600 10.5px/1 var(--font-ui);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.ma .tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.ma .tool {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  background: linear-gradient(180deg, var(--bg-raised), var(--bg-panel));
+}
+.ma .tool.on { border-color: var(--accent-border); background: linear-gradient(180deg, var(--accent-bg), var(--bg-panel)); }
+.ma .tool.off-mac { opacity: 0.5; border-style: dashed; }
+.ma .mono-ic {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, var(--bg-chip), var(--bg-panel));
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  font: 700 11px/1 var(--font-mono);
+  color: var(--fg);
+}
+.ma .tool .t { flex: 1; min-width: 0; }
+.ma .tool b { display: block; font: 500 12.5px/1.3 var(--font-ui); color: var(--fg); }
+.ma .tool i {
+  display: block;
+  overflow: hidden;
+  font: 400 10.5px/1.35 var(--font-mono);
+  font-style: normal;
+  color: var(--fg-faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ma .dim { flex: none; font: 400 12px/1.5 var(--font-ui); color: var(--fg-faint); }
+
+.ma .sw {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--bg-chip);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  cursor: pointer;
+}
+.ma .sw::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--fg-faint);
+  transition: left 0.12s;
+}
+.ma .sw.on { background: linear-gradient(180deg, var(--accent-solid-h), var(--accent-solid)); box-shadow: none; }
+.ma .sw.on::after { left: 15px; background: var(--fg-on-solid); }
+.ma .sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ma .pathsw { display: inline-flex; flex: none; align-items: center; gap: 6px; color: var(--fg-dim); font: 600 10.5px/1 var(--font-mono); }
+
+.ma .ic { width: 14px; height: 14px; flex: none; color: var(--fg-faint); }
+.ma .path {
+  flex: 1 1 180px;
+  min-width: 0;
+  overflow: hidden;
+  font: 400 11.5px/1.5 var(--font-mono);
+  color: var(--fg-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ma .gone .path { color: var(--fg-faint); text-decoration: line-through; }
+.ma .missing {
+  flex: none;
+  padding: 2px 7px;
+  border: 1px solid var(--gone-border);
+  border-radius: var(--r-md);
+  background: var(--bad-bg);
+  color: var(--bad);
+  font: 600 10.5px/1.2 var(--font-ui);
+}
+.ma .lvl {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-chip);
+  color: var(--fg-dim);
+  font: 500 11px/1 var(--font-ui);
+}
+.ma .share,
+.ma .from {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--fg-faint);
+  font: 500 11px/1 var(--font-ui);
+  text-decoration: none;
+  cursor: pointer;
+}
+.ma .from { border-style: solid; border-color: var(--line); }
+.ma .from:hover { color: var(--fg-2); }
+.ma .share.on { border-style: solid; border-color: var(--accent-border); background: var(--accent-bg); color: var(--accent-fg); }
+.ma .share.bk.on {
+  border-color: var(--baker-border);
+  background: color-mix(in srgb, var(--baker-solid) 24%, transparent);
+  color: color-mix(in srgb, var(--violet) 70%, var(--fg));
+}
+.ma .share:focus-visible,
+.ma .from:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ma .x {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--fg-faint);
+  font: 500 15px/1 var(--font-ui);
+  cursor: pointer;
+}
+.ma .x:hover { background: var(--bad-bg); color: var(--bad); }
+.ma .x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.ma .add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 9px 14px;
+  border-top: 1px dashed var(--line-strong);
+  background: color-mix(in srgb, var(--fg) 1.2%, transparent);
+}
+.ma .grp + .add,
+.ma .card > .add:first-child { border-top: 0; }
+.ma input {
+  min-width: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--bg-app);
+  color: var(--fg);
+  font: 400 12.5px/1 var(--font-ui);
+}
+.ma input.m { font: 400 12px/1 var(--font-mono); }
+.ma input.grow { flex: 1 1 160px; }
+.ma input.name-in { flex: 0 1 170px; }
+.ma input:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.ma .btn {
+  flex: none;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, var(--bg-raised), var(--bg-panel));
+  color: var(--fg-2);
+  font: 500 12.5px/1 var(--font-ui);
+  cursor: pointer;
+}
+.ma .btn:hover:not(:disabled) { background: var(--bg-chip); }
+.ma .btn:disabled { opacity: 0.45; cursor: default; }
+.ma .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ma .btn.p { border-color: transparent; background: linear-gradient(180deg, var(--accent-solid-h), var(--accent-solid)); color: var(--fg-on-solid); }
+.ma .var { flex: none; font: 600 12px/1.4 var(--font-mono); color: var(--fg); }
+.ma .eq { color: var(--fg-fainter); font-family: var(--font-mono); }
+
+/* ---- chips: blocked paths, seat hosts ------------------------------------ */
+
+.ma .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 14px; }
+.ma .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-chip);
+  color: var(--fg-2);
+  font: 400 11.5px/1.3 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.ma .chip.lock {
+  border-color: var(--bad-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bad) 11%, transparent), color-mix(in srgb, var(--bad) 3%, transparent));
+  color: color-mix(in srgb, var(--bad) 45%, var(--fg));
+}
+.ma .chip.lock.own { border-color: var(--bad); background: var(--bad-bg); color: var(--fg); }
+.ma .chip.host {
+  border-color: var(--ok-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 11%, transparent), color-mix(in srgb, var(--ok) 3%, transparent));
+  color: color-mix(in srgb, var(--ok) 45%, var(--fg));
+}
+.ma .chip.host.own { border-color: var(--ok); background: var(--ok-bg); color: var(--fg); }
+.ma .chip.proxy {
+  border-color: var(--accent-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--accent) 3%, transparent));
+  color: var(--accent-fg);
+}
+.ma .chip .ic { width: 12px; height: 12px; color: currentColor; }
+.ma .cx { padding: 0; border: 0; background: none; color: var(--fg-faint); font: 500 13px/1 var(--font-ui); cursor: pointer; }
+.ma .cx:hover { color: var(--bad); }
+
+/* ---- a check's result ----------------------------------------------------- */
+
+.ma .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.ma .cols > div { min-width: 0; }
+.ma .held {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid var(--ok-border);
+  border-radius: var(--r-pill);
+  background: var(--ok-bg);
+  color: var(--ok);
+  font: 600 10.5px/1.3 var(--font-ui);
+}
+.ma .held.no { border-color: var(--bad-border); background: var(--bad-bg); color: var(--bad); }

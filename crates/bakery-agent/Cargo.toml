@@ -1,0 +1,31 @@
+[package]
+name = "bakery-agent"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[features]
+# Off in every normal and release build (resolver "2" only unifies dev-dependency
+# features into a build that already includes tests/benches/examples) — enables
+# `secrets::secrets_path()`'s `BAKERY_SECRETS_PATH_FOR_TEST` override so tests in
+# THIS crate and in dependents (bakery-node) can isolate credential state instead
+# of reading the real `$HOME/.bakery/secrets.json` (06b-PIPE.md: "Do not: Live
+# secrets.json in tests").
+test-util = []
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+# Pure-sync HTTP — never nest a Tokio runtime inside the node async runtime.
+ureq = { version = "2", features = ["json"] }
+sha2 = "0.10"
+# Schemas of the shapes the node's routes return (its typed UI client).
+schemars = "1"
+# Optional: only used by local-only Claude Code OAuth module under ~/.bakery/providers
+# if that file still uses reqwest::blocking (migrate to ureq when convenient).
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+
+[dev-dependencies]
+tempfile = "3"
+tiny_http = { version = "0.12.0", default-features = false }

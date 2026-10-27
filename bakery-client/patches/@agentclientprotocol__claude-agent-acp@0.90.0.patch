@@ -1,0 +1,238 @@
+diff --git a/dist/acp-agent.js b/dist/acp-agent.js
+index cafc73ce4b7d292433d0673eaad97ab38d181c89..de4bc034b49bf154f3e1f32739761e564eebe085 100644
+--- a/dist/acp-agent.js
++++ b/dist/acp-agent.js
+@@ -1427,6 +1427,11 @@ export class ClaudeAcpAgent {
+                 steering: {
+                     supported: true,
+                 },
++                "bakery.dev/review": {
++                    version: 1,
++                    tools: ["Edit", "Write", "NotebookEdit"],
++                    reasons: true,
++                },
+             },
+         };
+     }
+@@ -6236,6 +6241,17 @@ export class ClaudeAcpAgent {
+         if (!option) {
+             throw new Error(`Unknown config option: ${params.configId}`);
+         }
++        // Bakery: the Ultracode toggle (see bakeryUltracodeOption). `null`
++        // clears the session's flag, which turns ultracode off.
++        if (params.configId === BAKERY_ULTRACODE_CONFIG_ID) {
++            if (typeof params.value !== "boolean") {
++                throw new Error(`Invalid value for config option ${params.configId}: ${params.value}`);
++            }
++            await session.query.applyFlagSettings({ ultracode: params.value ? true : null });
++            session.bakeryUltracode = { available: true, on: params.value };
++            await this.bakeryRefreshUltracode(session);
++            return { configOptions: session.configOptions };
++        }
+         // Fast mode carries a boolean value (for Clients that opted into boolean
+         // config options) or the "on"/"off" select fallback, so it bypasses the
+         // string-only validation the select-style options below rely on.
+@@ -7096,8 +7112,15 @@ export class ClaudeAcpAgent {
+                     ? undefined
+                     : Math.max(0, Math.min(100, Math.round((session.contextUsedTokens / session.contextWindowSize) * 100))),
+             });
++            // ACP permission responses choose an option but have no standard
++            // field for an edited tool input. Bakery's Review bridge uses this
++            // explicitly advertised extension for file writes only.
++            const bakeryReview = toolName === "Edit" || toolName === "Write" || toolName === "NotebookEdit"
++                ? { version: 1, toolName }
++                : undefined;
+             const response = await this.requestPermissionFromClient({
+                 ...presentation,
++                ...(bakeryReview ? { _meta: { ...presentation._meta, "bakery.dev/review": bakeryReview } } : {}),
+                 options: permissionOptions,
+                 sessionId: permissionSessionId,
+             }, toolName, signal, parentToolUseId, sessionId, agentID, toolInput, previewContent);
+@@ -7431,7 +7454,7 @@ export class ClaudeAcpAgent {
+                     // user pin is no longer supported, clear the flag layer instead
+                     // of replacing it with that displayed value. Opted-in clients
+                     // deliberately apply their concrete displayed effort.
+-                    effortFlagSettings(useRecommendedValue ? newEffort : undefined, mergeEffortSettings(session.settingsManager.getSettings(), session.effortSettingsOverride)));
++                    { ...effortFlagSettings(useRecommendedValue ? newEffort : undefined, mergeEffortSettings(session.settingsManager.getSettings(), session.effortSettingsOverride)), ...bakeryKeepUltracode(session) });
+                     session.effortPinnedLevel = effortPinnedForNewModel ? pinnedEffort : undefined;
+                     session.appliedEffortLevel =
+                         useRecommendedValue && newEffort !== "default" ? newEffort : undefined;
+@@ -7474,6 +7497,9 @@ export class ClaudeAcpAgent {
+             if (modeDowngraded) {
+                 await this.sessionModes.publishFallbackState(sessionId, session);
+             }
++            // Bakery: the rebuild above dropped the Ultracode toggle, and a new
++            // model may or may not take ultracode.
++            await this.bakeryRefreshUltracode(session, modelChanged);
+             // Last, so the switch's own control requests don't queue behind it.
+             if (modelChanged)
+                 this.refreshContextWindowInBackground(sessionId, session);
+@@ -7493,7 +7519,7 @@ export class ClaudeAcpAgent {
+         else if (configId === EFFORT_CONFIG_ID) {
+             // Apply first so a rejected control request cannot leave the displayed
+             // value ahead of the SDK flag layer.
+-            await session.query.applyFlagSettings(effortFlagSettings(value, mergeEffortSettings(session.settingsManager.getSettings(), session.effortSettingsOverride)));
++            await session.query.applyFlagSettings({ ...effortFlagSettings(value, mergeEffortSettings(session.settingsManager.getSettings(), session.effortSettingsOverride)), ...bakeryKeepUltracode(session) });
+             session.configOptions = session.configOptions.map((o) => o.id === configId && typeof o.currentValue === "string" ? { ...o, currentValue: value } : o);
+             session.appliedEffortLevel = value !== "default" ? value : undefined;
+             // "Default" clears the flag layer (toSdkEffortLevel → null), handing
+@@ -7537,6 +7563,21 @@ export class ClaudeAcpAgent {
+             this.logger.error(`Failed to reconcile model state after external switch to "${switchedModel}":`, err);
+         }
+     }
++    /** Bakery: show the Ultracode toggle while the CLI says the session can
++     *  take it, with the CLI's own on/off. `read` false reuses the last state
++     *  (a rebuild with the model unchanged); a failed read keeps it too. */
++    async bakeryRefreshUltracode(session, read = true) {
++        if (read) {
++            const state = await bakeryReadUltracode(session.query, this.logger);
++            if (state)
++                session.bakeryUltracode = state;
++        }
++        const others = session.configOptions.filter((o) => o.id !== BAKERY_ULTRACODE_CONFIG_ID);
++        session.configOptions =
++            session.bakeryUltracode?.available && clientSupportsBooleanConfigOptions(this.clientCapabilities)
++                ? [...others, bakeryUltracodeOption(session.bakeryUltracode.on)]
++                : others;
++    }
+     /** Replace the Fast mode option in `session.configOptions` so it reflects
+      *  `enabled` (and the client's current boolean-capability). A no-op when the
+      *  option isn't present, so callers must confirm the current model surfaces
+@@ -8217,6 +8258,11 @@ export class ClaudeAcpAgent {
+             if (useRecommendedValue && typeof initialEffort?.currentValue === "string") {
+                 await q.applyFlagSettings(effortFlagSettings(initialEffort.currentValue, effortSettings));
+             }
++            // Bakery: the Ultracode toggle, while the CLI says the session can take it.
++            const bakeryUltracode = (await bakeryReadUltracode(q, this.logger)) ?? { available: false, on: false };
++            if (bakeryUltracode.available && clientSupportsBooleanConfigOptions(this.clientCapabilities)) {
++                configOptions.push(bakeryUltracodeOption(bakeryUltracode.on));
++            }
+             // Seed the context window without awaited IPC. The cached authoritative
+             // window from a prior turn wins (`result.modelUsage`, cross-session),
+             // then the text heuristic, then the default. A guessed seed is refined
+@@ -8276,6 +8322,7 @@ export class ClaudeAcpAgent {
+                 currentAgent,
+                 fastModeEnabled,
+                 fastModeDisabledReason,
++                bakeryUltracode,
+                 abortController,
+                 emitRawSDKMessages: sessionMeta?.claudeCode?.emitRawSDKMessages ?? false,
+                 forwardSubagentText,
+@@ -8947,6 +8994,47 @@ export function resolveFastModeEnabled(params) {
+     }
+     throw new Error(`Invalid value for config option ${FAST_MODE_CONFIG_ID}: ${value}`);
+ }
++/** Bakery: Claude Code's Ultracode (standing dynamic workflows at any effort)
++ *  as the session toggle Claude Code's own editors show. The CLI's
++ *  get_settings says whether the session can take it (`ultracodeAvailable`)
++ *  and whether it is on (`ultracodeRequested`). */
++const BAKERY_ULTRACODE_CONFIG_ID = "ultracode";
++function bakeryUltracodeOption(on) {
++    return {
++        id: BAKERY_ULTRACODE_CONFIG_ID,
++        name: "Ultracode",
++        description: "Dynamic workflows on every task, this session only",
++        category: "model_config",
++        type: "boolean",
++        currentValue: on,
++    };
++}
++/** `{ available, on }` from the CLI, or undefined when it did not answer. */
++async function bakeryReadUltracode(query, logger) {
++    let timer;
++    try {
++        const settings = await Promise.race([
++            query.getSettings(),
++            new Promise((_, reject) => {
++                timer = setTimeout(() => reject(new Error("get_settings took over 5 s")), 5000);
++            }),
++        ]);
++        const applied = settings?.applied;
++        return { available: applied?.ultracodeAvailable === true, on: applied?.ultracodeRequested === true };
++    }
++    catch (error) {
++        logger.error("Failed to read the session's ultracode state:", error);
++        return undefined;
++    }
++    finally {
++        clearTimeout(timer);
++    }
++}
++/** An effort change sent without the `ultracode` key turns ultracode off
++ *  (CLI 2.1.284+), so every effort apply carries it while it is on. */
++function bakeryKeepUltracode(session) {
++    return session.bakeryUltracode?.on ? { ultracode: true } : {};
++}
+ export function buildConfigOptions(modes, models, modelInfos, currentEffortLevel, agents = [], currentAgent = DEFAULT_AGENT_ID, fastMode, presentation) {
+     const options = [
+         SessionModeManager.configOption(modes),
+diff --git a/dist/permissions/response.js b/dist/permissions/response.js
+index 2b763db8700c12b859490858b1026373fcf84b6f..dfcaf7ab2b3a4d444fb28244fee5a7f2d0b30e5f 100644
+--- a/dist/permissions/response.js
++++ b/dist/permissions/response.js
+@@ -1,4 +1,48 @@
+ import { applyClaudePermissionSelection, parseClaudePermissionSelection } from "./effects.js";
++const BAKERY_REVIEWED_PATH = { Edit: "file_path", Write: "file_path", NotebookEdit: "notebook_path" };
++function bakeryReview(response, toolName, input, toolUseID, selection) {
++    const review = response?._meta?.["bakery.dev/review"];
++    if (review === undefined)
++        return { input };
++    const pathKey = BAKERY_REVIEWED_PATH[toolName];
++    if (!pathKey ||
++        !review ||
++        typeof review !== "object" ||
++        Array.isArray(review) ||
++        review.version !== 1 ||
++        review.toolCallId !== toolUseID) {
++        throw new Error("Invalid Bakery Review permission response");
++    }
++    // A refusal carries the Bakery's reason, which Claude reads in place of
++    // the generic one.
++    if (selection.optionId === "reject") {
++        if (typeof review.reason !== "string" || !review.reason)
++            throw new Error("Bakery Review refusal omitted its reason");
++        return { input, reason: review.reason };
++    }
++    if (selection.optionId !== "allow-once" ||
++        !review.updatedInput ||
++        typeof review.updatedInput !== "object" ||
++        Array.isArray(review.updatedInput)) {
++        throw new Error("Invalid Bakery Review permission response");
++    }
++    const updated = review.updatedInput;
++    if (typeof input[pathKey] !== "string" || updated[pathKey] !== input[pathKey]) {
++        throw new Error(`Bakery Review cannot change a tool's ${pathKey}`);
++    }
++    if (toolName === "Write") {
++        if (typeof updated.content !== "string")
++            throw new Error("Bakery Review Write response omitted content");
++    }
++    else if (toolName === "NotebookEdit") {
++        if (typeof updated.new_source !== "string")
++            throw new Error("Bakery Review NotebookEdit response omitted new_source");
++    }
++    else if (typeof updated.old_string !== "string" || typeof updated.new_string !== "string") {
++        throw new Error("Bakery Review Edit response omitted an edit range");
++    }
++    return { input: updated };
++}
+ /** Decode, validate, and interpret an ACP response exactly once. */
+ export function decodeClaudePermissionResponse(response, toolName, input, toolUseID, offeredOptions, durableChangeSet) {
+     const selection = parseClaudePermissionSelection(response, toolName);
+@@ -6,12 +50,15 @@ export function decodeClaudePermissionResponse(response, toolName, input, toolUs
+     if (!offeredOption) {
+         throw new Error(`Permission option was not offered: ${selection.optionId}`);
+     }
++    const reviewed = bakeryReview(response, toolName, input, toolUseID, selection);
+     const permissionResult = applyClaudePermissionSelection(selection, {
+         toolName,
+-        input,
++        input: reviewed.input,
+         toolUseID,
+         durableChangeSet,
+     });
++    if (reviewed.reason && permissionResult.behavior === "deny")
++        permissionResult.message = reviewed.reason;
+     return {
+         permissionResult,
+         ...(selection.contextResetMode ? { contextResetMode: selection.contextResetMode } : {}),

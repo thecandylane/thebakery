@@ -1,0 +1,17 @@
+{
+  "appId": "dev.bakery.desktop",
+  "productName": "Bakery",
+  "directories": { "app": "electron/app", "output": "electron/out" },
+  "electronDist": "node_modules/electron/dist",
+  "electronVersion": "44.7.0",
+  "npmRebuild": false,
+  "asar": true,
+  "files": ["main.cjs", "preload.cjs", "package.json", "!**/node_modules{,/**}"],
+  "mac": {
+    "target": "dir",
+    "icon": "src-tauri/icons/icon.icns",
+    "identity": "-",
+    "hardenedRuntime": false,
+    "extendInfo": { "NSUserNotificationAlertStyle": "alert" }
+  }
+}

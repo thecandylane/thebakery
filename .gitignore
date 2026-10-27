@@ -1,0 +1,113 @@
+# =============================================================================
+# The Bakery — git ignore (public-repo posture)
+# Never commit credentials, tokens, Heart DBs, or private provider sources.
+# Code modules named secrets.rs / xai_oauth.rs are fine; credential *files* are not.
+# =============================================================================
+
+# ----- Local-only providers (never commit; never share with cloud agents) -----
+crates/bakery-agent/src/private/**
+!crates/bakery-agent/src/private/README.md
+docs/operator-local/
+
+# ----- Build / package artifacts -----
+/target/
+**/target/
+bakery-client/node_modules/
+.pnpm-store/
+bakery-client/test-results/
+bakery-client/playwright-report/
+bakery-client/build/
+bakery-client/.svelte-kit/
+bakery-client/package/
+bakery-client/src-tauri/target/
+bakery-client/src-tauri/.runtime/
+bakery-client/src-tauri/gen/
+dist/
+out/
+*.tsbuildinfo
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# ----- Env & shell local overrides -----
+.env
+.env.*
+!.env.example
+.envrc
+.direnv/
+*.local
+
+# ----- Credential & key material (files, not Rust modules) -----
+**/secrets.json
+secrets.json
+**/.secrets/
+**/*credentials*.json
+**/.credentials.json
+**/oauth_creds.json
+**/auth.json
+**/*-auth.json
+**/*_auth.json
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.key
+!**/*.key.ts
+!**/*.key.js
+!**/*.key.rs
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+id_ecdsa
+id_ecdsa.*
+*.keystore
+*.jks
+*.mobileprovision
+.netrc
+**/.netrc
+**/cookies.txt
+**/*cookie*jar*
+**/service-account*.json
+**/gcp-key*.json
+**/*serviceaccount*.json
+
+# Common vendor credential dumps if ever dropped in-tree
+**/.claude/.credentials.json
+**/.gemini/oauth_creds.json
+**/.codex/auth.json
+**/.config/gh/hosts.yml
+
+# ----- Bakery runtime (product writes these; may hold secrets + file bytes) -----
+.bakery/
+**/.bakery/
+heart.db
+heart.db-*
+**/heart.db
+**/heart.db-*
+node.json
+**/node.json
+
+# ----- OS / editor -----
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+*.orig
+.idea/
+.vscode/
+*.code-workspace
+
+# ----- Local scratch / WSL artifacts (added at checkpoint) -----
+*.zip
+*:Zone.Identifier
+/hello
+/hello.txt
+
+# ----- Local scratch / WSL artifacts -----
+*.zip
+*:Zone.Identifier
+/hello
+/hello.txt
+
+# scripts/bakery.sh dev logs
+.bakery-dev-logs/

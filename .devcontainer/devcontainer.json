@@ -1,0 +1,19 @@
+{
+  // The Baker workspace (containers/workspace): the repo's toolchains and the
+  // agents' own tools. No Docker socket, no keys. Linux build output stays in
+  // volumes, never in the host's macOS target/.
+  "name": "Bakery workspace",
+  "build": {
+    "dockerfile": "../containers/workspace/Dockerfile",
+    "context": "../containers/workspace"
+  },
+  "remoteUser": "agent",
+  "updateRemoteUserUID": true,
+  "containerEnv": {
+    "CARGO_TARGET_DIR": "/home/agent/target"
+  },
+  "mounts": [
+    "source=bakery-workspace-cargo,target=/home/agent/.cargo,type=volume",
+    "source=bakery-workspace-target,target=/home/agent/target,type=volume"
+  ]
+}

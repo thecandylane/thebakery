@@ -1,0 +1,840 @@
+/* ---- Bakery theme ----------------------------------------------------------
+   The only color/type origin (07d-A2 §1, 07d-A3 §0). Every Svelte/CSS module
+   reads these custom properties — no #rrggbb outside this file
+   (`currentColor`, `transparent`, `inherit` excepted). Bridges into non-CSS
+   renderers (Monaco, xterm) resolve these same variables via
+   getComputedStyle instead of duplicating literal colors; Dockview reads
+   them directly as CSS custom properties, no bridge code needed.
+
+   Schemes: `:root` is the dark default (no attribute needed); `[data-theme]`
+   on <html> selects a built-in palette — same token names, only values change.
+   `[data-palette]` applies the same palette to isolated Appearance previews.
+   `$lib/theme.ts` owns applying/persisting the attribute; `app.html` sets it
+   before first paint from localStorage (FOUC-safe). Every scheme redefines
+   the full token set below so nothing silently falls back to another
+   scheme's value.                                                           */
+
+:root, [data-palette] {
+  color-scheme: dark;
+  /* ---- surfaces, darkest to lightest ------------------------------- */
+  --bg-rail:      #0a0b0d;  /* status bar, terminal body */
+  --bg-app:       #0d0e11;  /* studio background, code background, inputs */
+  --bg-chrome:    #101216;  /* sidebar, title bar, sub-nav, Baker side column */
+  --bg-panel:     #13151a;  /* cards, widget headers, composers, modals */
+  --bg-raised:    #191c22;  /* card headers, menus, store tiles */
+  --bg-chip:      #20242b;  /* chips, kbd, hover fill, toggle track off */
+
+  /* ---- borders ----------------------------------------------------- */
+  --line-chrome:  #1a1d23;  /* between shell regions */
+  --line-row:     #17191e;  /* event-table row rule */
+  --line-soft:    #1e2229;  /* inside a card */
+  --line:         #262b33;  /* default control border */
+  --line-strong:  #2b313a;  /* modal + menu border, dashed affordances */
+  --scrollbar-thumb-hover: #333a45;
+
+  /* ---- text -------------------------------------------------------- */
+  --fg:           #e7e9ee;  /* primary */
+  --fg-body:      #d3d8e0;  /* prose, chat text */
+  --fg-2:         #c8cdd6;  /* secondary labels, tree names */
+  --fg-dim:       #98a0ad;  /* metadata, tool lines */
+  --fg-faint:     #6a727f;  /* notes, idle icons */
+  --fg-fainter:   #565d68;  /* section headers, placeholders */
+  --fg-ghost:     #4a5058;  /* timestamps, hashes, gutters */
+  --fg-linenum:   #3f454d;  /* editor line numbers */
+  --fg-rule:      #3a4048;  /* the "·" separators in meta rows */
+  --fg-on-solid:  #ffffff;  /* text/icon on a solid saturated fill (buttons) */
+  --fg-on-tint:   rgba(0, 0, 0, 0.65);  /* text on a bright tint square (initials) */
+
+  /* ---- accent (blue) ----------------------------------------------- */
+  --accent:        #5b8cff;  /* selection marks, active borders */
+  --accent-fg:     #8fb0ff;  /* text/icon on dark */
+  --accent-bg:     rgba(91,140,255,.14);
+  --accent-bg-2:   rgba(91,140,255,.24);  /* hover */
+  --accent-sel:    rgba(91,140,255,.10);  /* selected tree row */
+  --accent-border: #3a4c78;
+  --accent-solid:  #3f6fe0;  /* primary button */
+  --accent-solid-h:#4d7bea;
+
+  /* ---- status (fixed meaning; exact value still tuned per scheme) --- */
+  --ok:        #45c07a;   --ok-bg:   rgba(69,192,122,.14);  --ok-border: #2c4a37;
+  --warn:      #d99a3f;   --warn-bg: rgba(217,154,63,.18);  --warn-border:#4a3c22;
+  --bad:       #e2606c;   --bad-bg:  rgba(226,96,108,.14);  --bad-border: #4a2b30;
+  --gone-border: #3a2b2e; /* worktree gone from disk — muted, distinct from --bad-border */
+  --violet:    #a98fd8;   --violet-bg: rgba(169,143,216,.16);
+  --idle:      #4a5058;
+
+  /* ---- elevated / Baker -------------------------------------------- */
+  --baker-solid:   #6b4fa8;
+  --baker-solid-h: #7a5cbc;
+  --baker-border:  #4a3f5c;
+
+  /* ---- diff -------------------------------------------------------- */
+  --diff-add-bg: rgba(69,192,122,.10);
+  --diff-del-bg: rgba(226,96,108,.10);
+  --diff-add-fg: #8fdcab;
+  --diff-del-fg: #eb9aa2;
+  --diff-add-bg-editor: rgba(69,192,122,.07);  /* change gutter in the editor */
+  --diff-del-bg-editor: rgba(226,96,108,.07);
+
+  /* ---- syntax (Monaco token rules read these) ----------------------- */
+  --syntax-keyword: #8fb0ff;
+  --syntax-string:  #8fdcab;
+  --syntax-comment: #6a727f;
+  --syntax-number:  #a98fd8;
+  --syntax-type:    #d99a3f;
+
+  /* ---- shadows ----------------------------------------------------- */
+  --shadow-chip:  0 1px 2px rgba(0,0,0,.28), 0 6px 18px rgba(0,0,0,.18);
+  --shadow-menu:  0 12px 34px rgba(0,0,0,.60);
+  --shadow-modal: 0 30px 80px rgba(0,0,0,.70);
+  --glow-live:    0 0 7px rgba(69,192,122,.60);
+  --overlay-scrim: rgba(5,6,7,.58);
+}
+
+:root {
+  /* ---- radii (scheme-independent) ----------------------------------- */
+  --r-xs: 4px;   /* checkbox, layer chip */
+  --r-sm: 6px;   /* badge, kbd */
+  --r-md: 7px;   /* small button, chip */
+  --r-lg: 8px;   /* button, tree row */
+  --r-xl: 10px;  /* input, primary button, nav item */
+  --r-2xl: 12px; /* card, diff frame */
+  --r-3xl: 14px; /* rail button, panel card */
+  --r-4xl: 16px; /* section card */
+  --r-modal: 18px;
+  --r-pill: 999px;
+
+  /* ---- geometry (scheme-independent) --------------------------------- */
+  --sidebar-w: 284px;   /* clamp 190–460 */
+  --subnav-w: 194px;
+  --baker-aside-w: 380px;
+  --handle-w: 4px;
+  --statusbar-h: 22px;
+  --conversation-measure: 52rem;
+}
+
+/* ---- dim: a softer, lower-contrast dark ------------------------------- */
+
+:root[data-theme="dim"], [data-palette="dim"] {
+  color-scheme: dark;
+  --bg-rail:      #14161a;
+  --bg-app:       #181a1f;
+  --bg-chrome:    #1b1e24;
+  --bg-panel:     #1f2229;
+  --bg-raised:    #262a32;
+  --bg-chip:      #2f333c;
+
+  --line-chrome:  #262a31;
+  --line-row:     #22252b;
+  --line-soft:    #2a2e35;
+  --line:         #363c46;
+  --line-strong:  #404652;
+  --scrollbar-thumb-hover: #4a5058;
+
+  --fg:           #e6e8ec;
+  --fg-body:      #d5d9e0;
+  --fg-2:         #c4c9d1;
+  --fg-dim:       #939aa8;
+  --fg-faint:     #6f7683;
+  --fg-fainter:   #5b616d;
+  --fg-ghost:     #4f5561;
+  --fg-linenum:   #454b55;
+  --fg-rule:      #3f454e;
+  --fg-on-solid:  #ffffff;
+  --fg-on-tint:   rgba(0, 0, 0, 0.65);
+
+  --accent:        #6a94f5;
+  --accent-fg:     #96b6ff;
+  --accent-bg:     rgba(106,148,245,.14);
+  --accent-bg-2:   rgba(106,148,245,.24);
+  --accent-sel:    rgba(106,148,245,.10);
+  --accent-border: #3f4f78;
+  --accent-solid:  #4972d9;
+  --accent-solid-h:#567ee3;
+
+  --ok:        #4bb87e;   --ok-bg:   rgba(75,184,126,.14);  --ok-border: #2f4a3c;
+  --warn:      #d3a15a;   --warn-bg: rgba(211,161,90,.16);  --warn-border:#4a3f2a;
+  --bad:       #dd6f7a;   --bad-bg:  rgba(221,111,122,.14); --bad-border: #4a2f34;
+  --gone-border: #3d2f33;
+  --violet:    #ab97d4;   --violet-bg: rgba(171,151,212,.16);
+  --idle:      #4f5561;
+
+  --baker-solid:   #6e56a3;
+  --baker-solid-h: #7c63b3;
+  --baker-border:  #443a5c;
+
+  --diff-add-bg: rgba(75,184,126,.10);
+  --diff-del-bg: rgba(221,111,122,.10);
+  --diff-add-fg: #8bd1a7;
+  --diff-del-fg: #e6a4ab;
+  --diff-add-bg-editor: rgba(75,184,126,.07);
+  --diff-del-bg-editor: rgba(221,111,122,.07);
+
+  --syntax-keyword: #96b6ff;
+  --syntax-string:  #8bd1a7;
+  --syntax-comment: #6f7683;
+  --syntax-number:  #ab97d4;
+  --syntax-type:    #d3a15a;
+
+  --shadow-chip:  0 1px 2px rgba(0,0,0,.24), 0 6px 18px rgba(0,0,0,.15);
+  --shadow-menu:  0 12px 34px rgba(0,0,0,.50);
+  --shadow-modal: 0 30px 80px rgba(0,0,0,.60);
+  --glow-live:    0 0 7px rgba(75,184,126,.55);
+  --overlay-scrim: rgba(8,9,11,.54);
+}
+
+/* ---- light --------------------------------------------------------------- */
+
+:root[data-theme="light"], [data-palette="light"] {
+  color-scheme: light;
+  --bg-rail:      #e7e9ed;
+  --bg-app:       #f6f7f9;
+  --bg-chrome:    #eef0f3;
+  --bg-panel:     #ffffff;
+  --bg-raised:    #f7f8fa;
+  --bg-chip:      #e9ebef;
+
+  --line-chrome:  #dde0e5;
+  --line-row:     #e4e6ea;
+  --line-soft:    #e1e4e9;
+  --line:         #d3d7dd;
+  --line-strong:  #c2c7cf;
+  --scrollbar-thumb-hover: #b3b9c2;
+
+  --fg:           #14161a;
+  --fg-body:      #23262c;
+  --fg-2:         #33373f;
+  --fg-dim:       #5c6270;
+  --fg-faint:     #7c8291;
+  --fg-fainter:   #969ba8;
+  --fg-ghost:     #aab0bb;
+  --fg-linenum:   #b7bcc6;
+  --fg-rule:      #c7cbd3;
+  --fg-on-solid:  #ffffff;
+  --fg-on-tint:   rgba(0, 0, 0, 0.65);
+
+  --accent:        #3f6fe0;
+  --accent-fg:     #2e5bcf;
+  --accent-bg:     rgba(63,111,224,.10);
+  --accent-bg-2:   rgba(63,111,224,.18);
+  --accent-sel:    rgba(63,111,224,.08);
+  --accent-border: #a9bdec;
+  --accent-solid:  #3f6fe0;
+  --accent-solid-h:#3560c9;
+
+  --ok:        #1f9d5c;   --ok-bg:   rgba(31,157,92,.12);   --ok-border: #a8dcc0;
+  --warn:      #b5780f;   --warn-bg: rgba(181,120,15,.14);  --warn-border:#eecd97;
+  --bad:       #d0374a;   --bad-bg:  rgba(208,55,74,.10);   --bad-border: #f0b7bf;
+  --gone-border: #e6c3c7;
+  --violet:    #7c5cc4;   --violet-bg: rgba(124,92,196,.12);
+  --idle:      #aab0bb;
+
+  --baker-solid:   #6b4fa8;
+  --baker-solid-h: #5c4291;
+  --baker-border:  #cabce6;
+
+  --diff-add-bg: rgba(31,157,92,.10);
+  --diff-del-bg: rgba(208,55,74,.10);
+  --diff-add-fg: #1f8a52;
+  --diff-del-fg: #b93049;
+  --diff-add-bg-editor: rgba(31,157,92,.08);
+  --diff-del-bg-editor: rgba(208,55,74,.08);
+
+  --syntax-keyword: #2e5bcf;
+  --syntax-string:  #1f8a52;
+  --syntax-comment: #7c8291;
+  --syntax-number:  #7c5cc4;
+  --syntax-type:    #b5780f;
+
+  --shadow-chip:  0 1px 2px rgba(20,22,26,.10), 0 6px 18px rgba(20,22,26,.08);
+  --shadow-menu:  0 12px 34px rgba(20,22,26,.16);
+  --shadow-modal: 0 30px 80px rgba(20,22,26,.22);
+  --glow-live:    0 0 7px rgba(31,157,92,.45);
+  --overlay-scrim: rgba(28,30,34,.28);
+}
+
+/* ---- monokai: warm charcoal, lime, and cyan ------------------------------- */
+
+:root[data-theme="monokai"], [data-palette="monokai"] {
+  color-scheme: dark;
+  --bg-rail:      #1b1c18;
+  --bg-app:       #272822;
+  --bg-chrome:    #22231e;
+  --bg-panel:     #2d2e27;
+  --bg-raised:    #35362f;
+  --bg-chip:      #404139;
+
+  --line-chrome:  #3a3b32;
+  --line-row:     #32332c;
+  --line-soft:    #3c3d34;
+  --line:         #505147;
+  --line-strong:  #626457;
+  --scrollbar-thumb-hover: #757768;
+
+  --fg:           #f8f8f2;
+  --fg-body:      #e8e8de;
+  --fg-2:         #d4d4c8;
+  --fg-dim:       #aeafa0;
+  --fg-faint:     #969787;
+  --fg-fainter:   #7d7f70;
+  --fg-ghost:     #6b6d60;
+  --fg-linenum:   #77786b;
+  --fg-rule:      #616356;
+  --fg-on-solid:  #ffffff;
+  --fg-on-tint:   rgba(0,0,0,.75);
+
+  --accent:        #66d9ef;
+  --accent-fg:     #83e1f2;
+  --accent-bg:     rgba(102,217,239,.14);
+  --accent-bg-2:   rgba(102,217,239,.24);
+  --accent-sel:    rgba(102,217,239,.10);
+  --accent-border: #386470;
+  --accent-solid:  #246f80;
+  --accent-solid-h:#2c8192;
+
+  --ok:        #a6e22e;   --ok-bg:   rgba(166,226,46,.14);  --ok-border: #52652e;
+  --warn:      #e6db74;   --warn-bg: rgba(230,219,116,.16); --warn-border:#69633b;
+  --bad:       #f92672;   --bad-bg:  rgba(249,38,114,.14);  --bad-border: #742f46;
+  --gone-border: #5a3e45;
+  --violet:    #ae81ff;   --violet-bg: rgba(174,129,255,.16);
+  --idle:      #77786b;
+
+  --baker-solid:   #7952b6;
+  --baker-solid-h: #8b62c8;
+  --baker-border:  #675082;
+
+  --diff-add-bg: rgba(166,226,46,.10);
+  --diff-del-bg: rgba(249,38,114,.10);
+  --diff-add-fg: #b8e96a;
+  --diff-del-fg: #ff85ae;
+  --diff-add-bg-editor: rgba(166,226,46,.08);
+  --diff-del-bg-editor: rgba(249,38,114,.08);
+
+  --syntax-keyword: #f92672;
+  --syntax-string:  #e6db74;
+  --syntax-comment: #969787;
+  --syntax-number:  #ae81ff;
+  --syntax-type:    #66d9ef;
+
+  --shadow-chip:  0 1px 2px rgba(0,0,0,.28), 0 6px 18px rgba(0,0,0,.18);
+  --shadow-menu:  0 12px 34px rgba(0,0,0,.55);
+  --shadow-modal: 0 30px 80px rgba(0,0,0,.65);
+  --glow-live:    0 0 7px rgba(166,226,46,.50);
+  --overlay-scrim: rgba(12,13,10,.60);
+}
+
+/* ---- solarized dark: blue-green surfaces and restrained color ------------ */
+
+:root[data-theme="solarized-dark"], [data-palette="solarized-dark"] {
+  color-scheme: dark;
+  --bg-rail:      #00212b;
+  --bg-app:       #002b36;
+  --bg-chrome:    #032f3a;
+  --bg-panel:     #073642;
+  --bg-raised:    #0c3e49;
+  --bg-chip:      #164854;
+
+  --line-chrome:  #16414c;
+  --line-row:     #103b46;
+  --line-soft:    #1b4651;
+  --line:         #2a5360;
+  --line-strong:  #426571;
+  --scrollbar-thumb-hover: #586e75;
+
+  --fg:           #eee8d5;
+  --fg-body:      #c3cbbf;
+  --fg-2:         #aebfbb;
+  --fg-dim:       #93a1a1;
+  --fg-faint:     #839496;
+  --fg-fainter:   #71888b;
+  --fg-ghost:     #657b83;
+  --fg-linenum:   #657b83;
+  --fg-rule:      #586e75;
+  --fg-on-solid:  #ffffff;
+  --fg-on-tint:   rgba(0,0,0,.75);
+
+  --accent:        #268bd2;
+  --accent-fg:     #63b3e5;
+  --accent-bg:     rgba(38,139,210,.16);
+  --accent-bg-2:   rgba(38,139,210,.26);
+  --accent-sel:    rgba(38,139,210,.12);
+  --accent-border: #286084;
+  --accent-solid:  #176ca5;
+  --accent-solid-h:#237fba;
+
+  --ok:        #a0b628;   --ok-bg:   rgba(133,153,0,.16);   --ok-border: #465c27;
+  --warn:      #d5a62a;   --warn-bg: rgba(181,137,0,.16);   --warn-border:#625329;
+  --bad:       #ef6b66;   --bad-bg:  rgba(220,50,47,.16);   --bad-border: #693c3e;
+  --gone-border: #4e424a;
+  --violet:    #a29be8;   --violet-bg: rgba(108,113,196,.18);
+  --idle:      #657b83;
+
+  --baker-solid:   #665da9;
+  --baker-solid-h: #7970ba;
+  --baker-border:  #525680;
+
+  --diff-add-bg: rgba(133,153,0,.12);
+  --diff-del-bg: rgba(220,50,47,.12);
+  --diff-add-fg: #bdcb65;
+  --diff-del-fg: #ef9290;
+  --diff-add-bg-editor: rgba(133,153,0,.09);
+  --diff-del-bg-editor: rgba(220,50,47,.09);
+
+  --syntax-keyword: #63b3e5;
+  --syntax-string:  #4db6ac;
+  --syntax-comment: #839496;
+  --syntax-number:  #d890b7;
+  --syntax-type:    #d5a62a;
+
+  --shadow-chip:  0 1px 2px rgba(0,18,24,.28), 0 6px 18px rgba(0,18,24,.18);
+  --shadow-menu:  0 12px 34px rgba(0,18,24,.55);
+  --shadow-modal: 0 30px 80px rgba(0,18,24,.65);
+  --glow-live:    0 0 7px rgba(133,153,0,.50);
+  --overlay-scrim: rgba(0,18,24,.60);
+}
+
+/* ---- solarized light: warm paper with blue-green ink ---------------------- */
+
+:root[data-theme="solarized-light"], [data-palette="solarized-light"] {
+  color-scheme: light;
+  --bg-rail:      #e5dfcb;
+  --bg-app:       #fdf6e3;
+  --bg-chrome:    #eee8d5;
+  --bg-panel:     #fff9e9;
+  --bg-raised:    #f5efdc;
+  --bg-chip:      #e8e1cb;
+
+  --line-chrome:  #d9d2bd;
+  --line-row:     #e4ddc8;
+  --line-soft:    #dfd8c3;
+  --line:         #cec7b2;
+  --line-strong:  #b8b39f;
+  --scrollbar-thumb-hover: #a5aa9c;
+
+  --fg:           #073642;
+  --fg-body:      #3b555b;
+  --fg-2:         #4b6064;
+  --fg-dim:       #586e75;
+  --fg-faint:     #657b83;
+  --fg-fainter:   #7a8989;
+  --fg-ghost:     #8d9893;
+  --fg-linenum:   #93a1a1;
+  --fg-rule:      #b5baaa;
+  --fg-on-solid:  #ffffff;
+  --fg-on-tint:   rgba(0,0,0,.75);
+
+  --accent:        #2179b6;
+  --accent-fg:     #176ba3;
+  --accent-bg:     rgba(38,139,210,.10);
+  --accent-bg-2:   rgba(38,139,210,.18);
+  --accent-sel:    rgba(38,139,210,.08);
+  --accent-border: #9dbdca;
+  --accent-solid:  #176ca5;
+  --accent-solid-h:#125b8b;
+
+  --ok:        #637500;   --ok-bg:   rgba(133,153,0,.12);   --ok-border: #c4cf8b;
+  --warn:      #916b00;   --warn-bg: rgba(181,137,0,.12);   --warn-border:#d9c18c;
+  --bad:       #c02d2a;   --bad-bg:  rgba(220,50,47,.10);   --bad-border: #e6b0a3;
+  --gone-border: #d6bcaf;
+  --violet:    #6861ac;   --violet-bg: rgba(108,113,196,.12);
+  --idle:      #93a1a1;
+
+  --baker-solid:   #6861ac;
+  --baker-solid-h: #575095;
+  --baker-border:  #c0b8d4;
+
+  --diff-add-bg: rgba(133,153,0,.10);
+  --diff-del-bg: rgba(220,50,47,.10);
+  --diff-add-fg: #637500;
+  --diff-del-fg: #b32c2a;
+  --diff-add-bg-editor: rgba(133,153,0,.08);
+  --diff-del-bg-editor: rgba(220,50,47,.08);
+
+  --syntax-keyword: #176ba3;
+  --syntax-string:  #207d76;
+  --syntax-comment: #657b83;
+  --syntax-number:  #ac477b;
+  --syntax-type:    #916b00;
+
+  --shadow-chip:  0 1px 2px rgba(38,45,34,.10), 0 6px 18px rgba(38,45,34,.08);
+  --shadow-menu:  0 12px 34px rgba(38,45,34,.16);
+  --shadow-modal: 0 30px 80px rgba(38,45,34,.22);
+  --glow-live:    0 0 7px rgba(133,153,0,.40);
+  --overlay-scrim: rgba(38,45,34,.28);
+}
+
+/* ---- high contrast: explicit boundaries, bright ink, no dim metadata ------ */
+
+:root[data-theme="high-contrast"], [data-palette="high-contrast"] {
+  color-scheme: dark;
+  --bg-rail:      #000000;
+  --bg-app:       #000000;
+  --bg-chrome:    #080808;
+  --bg-panel:     #0c0c0c;
+  --bg-raised:    #151515;
+  --bg-chip:      #242424;
+
+  --line-chrome:  #919191;
+  --line-row:     #636363;
+  --line-soft:    #777777;
+  --line:         #a0a0a0;
+  --line-strong:  #ffffff;
+  --scrollbar-thumb-hover: #d0d0d0;
+
+  --fg:           #ffffff;
+  --fg-body:      #ffffff;
+  --fg-2:         #eeeeee;
+  --fg-dim:       #dddddd;
+  --fg-faint:     #cccccc;
+  --fg-fainter:   #c5c5c5;
+  --fg-ghost:     #bbbbbb;
+  --fg-linenum:   #bbbbbb;
+  --fg-rule:      #a0a0a0;
+  --fg-on-solid:  #ffffff;
+  --fg-on-tint:   #000000;
+
+  --accent:        #73cfff;
+  --accent-fg:     #a3e0ff;
+  --accent-bg:     rgba(115,207,255,.16);
+  --accent-bg-2:   rgba(115,207,255,.26);
+  --accent-sel:    rgba(115,207,255,.14);
+  --accent-border: #73cfff;
+  --accent-solid:  #0054b4;
+  --accent-solid-h:#0065cc;
+
+  --ok:        #86ffb0;   --ok-bg:   rgba(134,255,176,.14); --ok-border: #86ffb0;
+  --warn:      #ffe17a;   --warn-bg: rgba(255,225,122,.14); --warn-border:#ffe17a;
+  --bad:       #ff92a0;   --bad-bg:  rgba(255,146,160,.14); --bad-border: #ff92a0;
+  --gone-border: #d09da5;
+  --violet:    #d7b0ff;   --violet-bg: rgba(215,176,255,.14);
+  --idle:      #bbbbbb;
+
+  --baker-solid:   #7142ad;
+  --baker-solid-h: #8252be;
+  --baker-border:  #d7b0ff;
+
+  --diff-add-bg: rgba(134,255,176,.14);
+  --diff-del-bg: rgba(255,146,160,.14);
+  --diff-add-fg: #86ffb0;
+  --diff-del-fg: #ff92a0;
+  --diff-add-bg-editor: rgba(134,255,176,.12);
+  --diff-del-bg-editor: rgba(255,146,160,.12);
+
+  --syntax-keyword: #a3e0ff;
+  --syntax-string:  #86ffb0;
+  --syntax-comment: #bbbbbb;
+  --syntax-number:  #d7b0ff;
+  --syntax-type:    #ffe17a;
+
+  --shadow-chip:  none;
+  --shadow-menu:  0 0 0 1px #ffffff;
+  --shadow-modal: 0 0 0 1px #ffffff;
+  --glow-live:    none;
+  --overlay-scrim: rgba(0,0,0,.75);
+}
+
+/* ---- warm: the Bakery's dark look, "C · Crisp studio" ------------------------
+   Picked by the operator on 2026-10-08 (design canvas, round 2). Warm brown
+   surfaces tiled with 1px borders, ivory type, an amber accent, and saturated
+   status colours. It replaces jcode's "Warm neutral" values that this scheme
+   started from; syntax is still VS Code Dark+. The UI font is the mono font. */
+
+:root[data-theme="warm"], [data-palette="warm"] {
+  color-scheme: dark;
+  --font-ui: var(--font-mono);
+  --bg-rail:      #1b1816;
+  --bg-app:       #1e1b19;
+  --bg-chrome:    #24201d;
+  --bg-panel:     #262220;
+  --bg-raised:    #29251f;
+  --bg-chip:      #3a332d;
+
+  --line-chrome:  #3e3732;
+  --line-row:     #3a332e;
+  --line-soft:    #3a332e;
+  --line:         #4b433c;
+  --line-strong:  #574e46;
+  --scrollbar-thumb-hover: #5f564d;
+
+  --fg:           #f4ece2;
+  --fg-body:      #ebe3d9;
+  --fg-2:         #d6cdc1;
+  --fg-dim:       #a89e92;
+  --fg-faint:     #8c8277;
+  --fg-fainter:   #7d7266;
+  --fg-ghost:     #6f655b;
+  --fg-linenum:   #5f564d;
+  --fg-rule:      #574e46;
+  --fg-on-solid:  #1e1712;
+  --fg-on-tint:   rgba(0, 0, 0, 0.65);
+
+  --accent:        #e0a96d;
+  --accent-fg:     #f0c08c;
+  --accent-bg:     rgba(224,169,109,.13);
+  --accent-bg-2:   rgba(224,169,109,.22);
+  --accent-sel:    #3a3129;
+  --accent-border: #5a4a3a;
+  --accent-solid:  #cc8e52;
+  --accent-solid-h:#e7b47b;
+
+  --ok:        #8fd07a;   --ok-bg:   rgba(143,208,122,.14); --ok-border: #3d6b4c;
+  --warn:      #efb45a;   --warn-bg: rgba(239,180,90,.16);  --warn-border:#8a6a2c;
+  --bad:       #f07a6c;   --bad-bg:  rgba(240,122,108,.14); --bad-border: #7a3a33;
+  --gone-border: #4a3a36;
+  --violet:    #a99be0;   --violet-bg: rgba(169,155,224,.16);
+  --idle:      #776b5f;
+
+  --baker-solid:   #e0a96d;
+  --baker-solid-h: #e7b47b;
+  --baker-border:  #5a4a3a;
+
+  --diff-add-bg: #2c4426;
+  --diff-del-bg: #4a2a26;
+  --diff-add-fg: #aed38f;
+  --diff-del-fg: #f2958a;
+  --diff-add-bg-editor: rgba(143,208,122,.07);
+  --diff-del-bg-editor: rgba(240,122,108,.07);
+
+  --syntax-keyword: #569cd6;
+  --syntax-string:  #ce9178;
+  --syntax-comment: #6a9955;
+  --syntax-number:  #b5cea8;
+  --syntax-type:    #4ec9b0;
+
+  --shadow-chip:  0 1px 2px rgba(0,0,0,.30), 0 6px 18px rgba(0,0,0,.20);
+  --shadow-menu:  0 12px 34px rgba(0,0,0,.55);
+  --shadow-modal: 0 30px 80px rgba(0,0,0,.65);
+  --glow-live:    0 0 0 2px rgba(143,208,122,.25);
+  --overlay-scrim: rgba(18,16,14,.60);
+}
+
+/* ---- parchment: jcode desktop's light "Parchment" ---------------------------
+   Values from jcode's PARCHMENT palette (theme/palettes.rs); in-between
+   steps are blends of its own colours. */
+
+:root[data-theme="parchment"], [data-palette="parchment"] {
+  color-scheme: light;
+  --font-ui: var(--font-mono);
+  --bg-rail:      #e3d8c0;
+  --bg-app:       #f5eedd;
+  --bg-chrome:    #ece2cc;
+  --bg-panel:     #faf3e3;
+  --bg-raised:    #efe5cf;
+  --bg-chip:      #e6dbc2;
+
+  --line-chrome:  #d9cdb2;
+  --line-row:     #e6dcc5;
+  --line-soft:    #ddd1b6;
+  --line:         #c6b797;
+  --line-strong:  #b3a382;
+  --scrollbar-thumb-hover: #a8987a;
+
+  --fg:           #2e271d;
+  --fg-body:      #3e3528;
+  --fg-2:         #4f4535;
+  --fg-dim:       #6e6049;
+  --fg-faint:     #85775f;
+  --fg-fainter:   #9a8c72;
+  --fg-ghost:     #aa9c82;
+  --fg-linenum:   #b8aa8f;
+  --fg-rule:      #c6b797;
+  --fg-on-solid:  #faf3e3;
+  --fg-on-tint:   rgba(0, 0, 0, 0.65);
+
+  --accent:        #85602d;
+  --accent-fg:     #6f4f22;
+  --accent-bg:     rgba(133,96,45,.10);
+  --accent-bg-2:   rgba(133,96,45,.18);
+  --accent-sel:    rgba(133,96,45,.08);
+  --accent-border: #c9ae86;
+  --accent-solid:  #85602d;
+  --accent-solid-h:#74531f;
+
+  --ok:        #536b37;   --ok-bg:   rgba(83,107,55,.12);   --ok-border: #b8c4a2;
+  --warn:      #805d16;   --warn-bg: rgba(128,93,22,.12);   --warn-border:#d6c08f;
+  --bad:       #a63c32;   --bad-bg:  rgba(166,60,50,.10);   --bad-border: #dcaea7;
+  --gone-border: #d8bdb5;
+  --violet:    #80506a;   --violet-bg: rgba(128,80,106,.10);
+  --idle:      #aa9c82;
+
+  --baker-solid:   #80506a;
+  --baker-solid-h: #6e425a;
+  --baker-border:  #d2b9c6;
+
+  --diff-add-bg: rgba(83,107,55,.12);
+  --diff-del-bg: rgba(166,60,50,.10);
+  --diff-add-fg: #44592c;
+  --diff-del-fg: #8f3128;
+  --diff-add-bg-editor: rgba(83,107,55,.08);
+  --diff-del-bg-editor: rgba(166,60,50,.08);
+
+  --syntax-keyword: #80506a;
+  --syntax-string:  #536b37;
+  --syntax-comment: #85775f;
+  --syntax-number:  #925326;
+  --syntax-type:    #49655f;
+
+  --shadow-chip:  0 1px 2px rgba(62,53,40,.10), 0 6px 18px rgba(62,53,40,.08);
+  --shadow-menu:  0 12px 34px rgba(62,53,40,.18);
+  --shadow-modal: 0 30px 80px rgba(62,53,40,.24);
+  --glow-live:    0 0 7px rgba(83,107,55,.40);
+  --overlay-scrim: rgba(62,53,40,.25);
+}
+
+/* ---- AI panel semantic tokens (one color authority) -----------------------
+   The vendored shadcn/AI Elements sources expect a standard semantic token
+   set (background/foreground/muted/border/ring/...). Rather than letting a
+   scaffold introduce a second palette, every one of them is DERIVED from the
+   Bakery tokens above, so dark/dim/light switching drives them for free and
+   this file stays the only place a colour is chosen.
+
+   The `--ai-` prefix is load-bearing: shadcn's `--accent` means "hover
+   surface", while Bakery's `--accent` is the brand blue. Sharing the name
+   would silently repaint either the panel or the whole shell. They are kept
+   apart on purpose. `src/lib/styles/ai-panel.css` maps these into Tailwind
+   utilities via `@theme inline`.                                           */
+
+:root, [data-palette] {
+  --ai-background:            var(--bg-panel);
+  --ai-foreground:            var(--fg-body);
+  --ai-card:                  var(--bg-panel);
+  --ai-card-foreground:       var(--fg);
+  --ai-popover:               var(--bg-raised);
+  --ai-popover-foreground:    var(--fg);
+  --ai-primary:               var(--accent-solid);
+  --ai-primary-foreground:    var(--fg-on-solid);
+  --ai-secondary:             var(--bg-chip);
+  --ai-secondary-foreground:  var(--fg-2);
+  --ai-muted:                 var(--bg-chip);
+  --ai-muted-foreground:      var(--fg-dim);
+  /* shadcn "accent" = hover/active surface, NOT the brand accent. */
+  --ai-accent:                var(--bg-chip);
+  --ai-accent-foreground:     var(--fg);
+  --ai-destructive:           var(--bad);
+  --ai-destructive-foreground:var(--fg-on-solid);
+  --ai-border:                var(--line);
+  --ai-input:                 var(--line);
+  --ai-ring:                  var(--accent);
+  --ai-radius:                var(--r-lg);
+}
+
+/* ---- code and tool colours (derived) --------------------------------------
+   Code highlighting uses shiki's CSS-variables theme (`$lib/react/highlight`),
+   so every token colour is one of the `--shiki-*` names below. The tool log
+   colours each call by what it does. Both only point at the scheme tokens
+   above: every built-in and custom scheme drives them, and no colour is
+   chosen here.                                                             */
+
+:root, [data-palette] {
+  --shiki-foreground:              var(--fg-body);
+  --shiki-background:              transparent;
+  --shiki-token-keyword:           var(--syntax-keyword);
+  --shiki-token-string:            var(--syntax-string);
+  --shiki-token-string-expression: var(--syntax-string);
+  --shiki-token-comment:           var(--syntax-comment);
+  --shiki-token-constant:          var(--syntax-number);
+  --shiki-token-function:          var(--syntax-type);
+  --shiki-token-parameter:         var(--fg-2);
+  --shiki-token-punctuation:       var(--fg-dim);
+  --shiki-token-link:              var(--accent-fg);
+  --shiki-token-inserted:          var(--diff-add-fg);
+  --shiki-token-deleted:           var(--diff-del-fg);
+  --shiki-token-changed:           var(--warn);
+
+  --tool-read:   var(--accent-fg);
+  /* Every built-in scheme gives --syntax-number the --violet value, which
+     Bakery ops already use: search mixes a hue of its own from two tokens. */
+  --tool-search: color-mix(in srgb, var(--accent-fg) 55%, var(--ok));
+  --tool-edit:   var(--warn);
+  --tool-exec:   var(--ok);
+  --tool-fetch:  var(--syntax-string);
+  --tool-bakery: var(--violet);
+  --tool-danger: var(--bad);
+  --tool-other:  var(--fg-dim);
+}
+
+/* ---- studio chrome (derived) -------------------------------------------------
+   The pieces of the C · Crisp studio look that every scheme needs: the
+   sidebar's section hues, file links, chips that carry a state, the raised and
+   accent gradients, and the tab strip and status bar surfaces. Each derives
+   from the scheme tokens above, so every scheme gets them; warm sets C's exact
+   values in the block after this one.                                       */
+
+:root, [data-palette] {
+  --hue-threads:    var(--accent);
+  --hue-project:    var(--warn);
+  --hue-containers: color-mix(in srgb, var(--ok) 55%, var(--accent-fg));
+  --hue-github:     var(--violet);
+  --link:           var(--syntax-keyword);
+
+  --chip-bg:        var(--bg-chip);
+  --chip-fg:        var(--fg-2);
+  --chip-ok-bg:     color-mix(in srgb, var(--ok) 38%, var(--bg-app));
+  --chip-ok-fg:     color-mix(in srgb, var(--ok) 20%, var(--fg));
+  --chip-warn-bg:   color-mix(in srgb, var(--warn) 42%, var(--bg-app));
+  --chip-warn-fg:   color-mix(in srgb, var(--warn) 20%, var(--fg));
+  --chip-bad-bg:    color-mix(in srgb, var(--bad) 42%, var(--bg-app));
+  --chip-bad-fg:    color-mix(in srgb, var(--bad) 15%, var(--fg));
+  --chip-teal-bg:   color-mix(in srgb, var(--hue-containers) 35%, var(--bg-app));
+  --chip-teal-fg:   color-mix(in srgb, var(--hue-containers) 18%, var(--fg));
+
+  --grad-chrome:    linear-gradient(180deg, color-mix(in srgb, var(--fg) 4%, var(--bg-chrome)), var(--bg-chrome));
+  --grad-button:    linear-gradient(180deg, color-mix(in srgb, var(--fg) 5%, var(--bg-chip)), var(--bg-chip));
+  --grad-accent:    linear-gradient(180deg, var(--accent-solid-h), var(--accent-solid));
+  --bg-tabs:        color-mix(in srgb, var(--bg-app) 60%, var(--bg-rail));
+  --bg-pressed:     var(--accent-bg-2);
+  --diff-add-text:  color-mix(in srgb, var(--diff-add-fg) 40%, var(--fg));
+  --diff-del-text:  color-mix(in srgb, var(--diff-del-fg) 40%, var(--fg));
+  --diff-filler:    repeating-linear-gradient(135deg, color-mix(in srgb, var(--fg) 7%, transparent) 0 2px, transparent 2px 7px);
+}
+
+:root[data-theme="warm"], [data-palette="warm"] {
+  --hue-threads:    #e0a96d;
+  --hue-project:    #d9c070;
+  --hue-containers: #6fc2b0;
+  --hue-github:     #a99be0;
+  --link:           #7fb4f0;
+  --chip-ok-bg:     #3d6b4c;  --chip-ok-fg:   #dff2e4;
+  --chip-warn-bg:   #7a5a22;  --chip-warn-fg: #ffeccc;
+  --chip-bad-bg:    #7a3a33;  --chip-bad-fg:  #ffe1dc;
+  --chip-teal-bg:   #2f5249;  --chip-teal-fg: #d8f1ea;
+  --grad-chrome:    linear-gradient(180deg, #2e2924, #28231f);
+  --grad-button:    linear-gradient(180deg, #3a3430, #312c28);
+  --grad-accent:    linear-gradient(180deg, #e7b47b, #cc8e52);
+  --bg-tabs:        #1f1c1a;
+  --bg-pressed:     #4a3b2d;
+  --diff-add-text:  #d9f0cf;
+  --diff-del-text:  #ffd0c9;
+}
+
+/* ---- chart series ----------------------------------------------------------
+   The categorical slots a chart in a thread colours its series with, in this
+   fixed order: blue, orange, aqua, yellow, magenta, green, violet, red. Not
+   derived from the scheme's own hues, which sit too light for marks and too
+   close to each other: these are the dataviz reference steps, validated (the
+   six checks: lightness band, chroma floor, colour-blind and normal-vision
+   separation, contrast) against the dark surfaces (#13151a, warm's #262220)
+   and, in their light steps, the light ones (#ffffff, parchment's #faf3e3),
+   where the table view carries the slots under 3:1. Text never wears them. */
+
+:root, [data-palette] {
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-4: #c98500;
+  --viz-5: #d55181;
+  --viz-6: #008300;
+  --viz-7: #9085e9;
+  --viz-8: #e66767;
+}
+
+:root[data-color-mode="light"] {
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-4: #eda100;
+  --viz-5: #e87ba4;
+  --viz-6: #008300;
+  --viz-7: #6250d6;
+  --viz-8: #e34948;
+}

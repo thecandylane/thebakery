@@ -1,0 +1,29 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/bakery-core",
+    "crates/bakery-heart",
+    "crates/bakery-node",
+    "crates/bakery-agent",
+    "crates/bakery-exec",
+]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+authors = ["thecandylane"]
+
+# NOTE: patch versions are best-effort; `cargo build` resolves and may bump them.
+[workspace.dependencies]
+blake3 = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# Line tables only: function names and line numbers stay. A breakpoint
+# inside a dependency has no locals. The Bakery's own crates keep line numbers.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.test]
+debug = "line-tables-only"

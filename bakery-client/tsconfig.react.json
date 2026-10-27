@@ -1,0 +1,26 @@
+{
+  // `pnpm check` runs svelte-check against .svelte-kit/tsconfig.json, whose
+  // include globs are `src/**/*.{js,ts,svelte}` — no `.tsx`. Without this
+  // second project the entire React island (the vendored AI Elements, the
+  // shadcn primitives and the agent panel) would ship unchecked, which is
+  // not a gate, it is the absence of one. `check:react` closes that.
+  //
+  // Scoped to the island on purpose: `.svelte.ts` files use runes and are
+  // already covered by svelte-check, which understands them.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "esnext",
+    "target": "es2022",
+    "lib": ["dom", "dom.iterable", "es2023"],
+    // `import.meta.env` is Vite's, and the island imports `$lib/node`.
+    "types": ["vite/client"],
+    "verbatimModuleSyntax": false
+  },
+  "include": [
+    "src/lib/react/**/*.ts",
+    "src/lib/react/**/*.tsx",
+    "src/lib/ai-elements/**/*.tsx",
+    "src/components/ui/**/*.tsx"
+  ]
+}

@@ -1,0 +1,10 @@
+# Time limits for scripts/test.sh, in seconds. A test still running at its
+# limit fails as "TIMEOUT <test> after <n> s" (scripts/test-watchdog.rs),
+# and the rest of its binary still runs. Every test has the default; a test
+# known to be slow has its own line:
+#
+#   <seconds> <package> <test>
+#
+# libtest names a test only once it has run 60 seconds, so with more than
+# one test thread no limit ends sooner than that.
+default 300
